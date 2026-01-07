@@ -32,15 +32,29 @@ Como no tienes la herramienta `git` instalada en tu equipo, la forma más fácil
    - **Salida**: `dist`
 4. Haz clic en **Revisar y crear**.
 
-## Paso 4: Configurar Variables de Entorno (CRÍTICO)
-1. En tu app de Azure, ve a **Configuración** -> **Variables de entorno**.
-2. Añade:
+## Paso 4: Configurar las contraseñas (Variables de entorno)
+Este es el único paso técnico. Como tu app se construye en GitHub, necesitamos poner las credenciales allí para que se "borren" y se escriban las reales durante la construcción.
+
+### A. Configurar en GitHub (Para que la app funcione)
+1. Ve a tu repositorio en **GitHub**.
+2. Ve a **Settings** -> **Secrets and variables** -> **Actions**.
+3. Haz clic en la pestaña **Variables** (no Secrets, Variables).
+4. Haz clic en **New repository variable** y añade estas tres:
    - `VITE_SHAREPOINT_SITE_URL`
    - `VITE_SHAREPOINT_CLIENT_ID`
    - `VITE_SHAREPOINT_TENANT_ID`
-3. Guarda los cambios.
 
-## Paso 5: Actualizar el Registro de Aplicación (Azure AD)
-1. Copia la URL de tu app de Azure.
-2. Ve a tu App Registration en Azure AD -> **Autenticación**.
-3. Añade la URL de Azure a los **URIs de redireccionamiento**.
+### B. Configurar en Azure (Para seguridad extra)
+Repite lo mismo en el Portal de Azure (Pestaña "Variables de entorno"), aunque lo más importante es el paso de GitHub.
+
+## Paso 5: Actualizar archivos y Re-desplegar
+Cada vez que yo haga un cambio aquí (como el que acabo de hacer para arreglar los iconos), tienes que:
+1. Subir/Arrastrar los archivos modificados a GitHub de nuevo.
+2. Esto activará una nueva "construcción" (puedes verlo en la pestaña **Actions** de GitHub).
+3. Cuando termine (se ponga en verde), refresca tu web de Azure.
+
+## Paso 6: Primer Inicio de Sesión
+La primera vez que entres en la nueva URL, la app no sabrá quién eres. 
+1. Ve a la pantalla de **Ajustes**.
+2. Pulsa en **Actualizar desde SharePoint**.
+3. Haz el login de Microsoft. A partir de ese momento, la app ya te recordará siempre.
