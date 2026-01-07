@@ -20,7 +20,7 @@ export const initializeMSAL = async (clientId: string, tenantId: string): Promis
             redirectUri: window.location.origin,
         },
         cache: {
-            cacheLocation: 'sessionStorage',
+            cacheLocation: 'localStorage',
             storeAuthStateInCookie: true, // Set to true to help with silent auth in some browsers
         }
     };
@@ -28,6 +28,13 @@ export const initializeMSAL = async (clientId: string, tenantId: string): Promis
     if (!msalInstance) {
         msalInstance = new PublicClientApplication(msalConfig);
         await msalInstance.initialize();
+
+        // Handle redirect result (important for proper SSO flow)
+        const response = await msalInstance.handleRedirectPromise();
+        if (response) {
+            currentAccount = response.account;
+            msalInstance.setActiveAccount(response.account);
+        }
     }
 
     return msalInstance;
@@ -86,6 +93,22 @@ export const authenticateUser = async (writeAccess = false): Promise<AccountInfo
     } catch (error: any) {
         console.error('Authentication error:', error);
         throw new Error(`Authentication failed: ${error.message}`);
+    }
+};
+
+/**
+ * Trigger login redirect (for automatic flow)
+ */
+export const login = async (): Promise<void> => {
+    if (!msalInstance) {
+        const config = getDefaultSharePointConfig();
+        await initializeMSAL(config.clientId, config.tenantId);
+    }
+
+    if (msalInstance) {
+        await msalInstance.loginRedirect({
+            scopes: SCOPES_READ,
+        });
     }
 };
 
