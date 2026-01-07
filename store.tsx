@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { AppState, Consultant, Project, Assignment, Absence, AppSettings } from './types';
 import { initialAppState } from './data/mockData';
-import { initializeMSAL, trySilentAuth, fetchAllSharePointData } from './services/sharepointService';
+import { initializeMSAL, trySilentAuth, fetchAllSharePointData, login } from './services/sharepointService';
 import { getDefaultSharePointConfig } from './services/sharepointConfig';
 
 interface AppContextType extends AppState {
@@ -51,7 +51,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     loadSharePointData(data);
                     console.log('✅ SharePoint Data auto-synced on load');
                 } else {
-                    console.log('ℹ️ SharePoint: No active session found for silent sync');
+                    console.log('ℹ️ SharePoint: No active session found. Redirecting to login...');
+                    await login();
                 }
             } catch (error) {
                 console.error('❌ SharePoint Auto-sync error:', error);
