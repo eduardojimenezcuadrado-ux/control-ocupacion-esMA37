@@ -26,6 +26,10 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_LEMON_COAST_0ED193C10 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
           action: "upload"
+        env:
+          VITE_SHAREPOINT_SITE_URL: ${{ vars.VITE_SHAREPOINT_SITE_URL }}
+          VITE_SHAREPOINT_CLIENT_ID: ${{ vars.VITE_SHAREPOINT_CLIENT_ID }}
+          VITE_SHAREPOINT_TENANT_ID: ${{ vars.VITE_SHAREPOINT_TENANT_ID }}
           ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
           app_location: "/" # App source code path
@@ -44,3 +48,4 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_LEMON_COAST_0ED193C10 }}
           action: "close"
+
