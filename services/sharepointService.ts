@@ -63,9 +63,7 @@ export const trySilentAuth = async (): Promise<AccountInfo | null> => {
  * Authenticate user via Microsoft login popup
  */
 export const authenticateUser = async (writeAccess = false): Promise<AccountInfo> => {
-    if (!msalInstance) {
-        throw new Error('MSAL not initialized. Call initializeMSAL first.');
-    }
+
 
     try {
         if (!msalInstance) {
