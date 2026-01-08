@@ -8,6 +8,7 @@ export const initialSettings: AppSettings = {
     defaultView: 'Mensual',
     includeTentativeByDefault: true,
     geminiApiKey: '',
+    sharePointSiteUrl: 'https://raonamadrid.sharepoint.com',
 };
 
 export const consultants: Consultant[] = [
