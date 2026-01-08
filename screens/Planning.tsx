@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from '../store';
 import {
     Plus,
@@ -8,13 +8,20 @@ import {
     Trash,
     ChevronLeft,
     ChevronRight,
-    ExternalLink,
-    Info,
-    CalendarDays,
+    Search,
+    Maximize2,
     Clock,
-    User
+    User,
+    Calendar,
+    CheckCircle2,
+    AlertCircle,
+    X,
+    Filter,
+    LayoutGrid,
+    MoreHorizontal,
+    Info
 } from 'lucide-react';
-import { Assignment, Project } from '../types';
+import { Assignment, Project, Absence } from '../types';
 import {
     formatPeriod,
     getPeriodOccupancy,
@@ -32,328 +39,514 @@ const Planning: React.FC = () => {
         addAssignment,
         updateAssignment,
         removeAssignment,
-        setAssignments,
         copyPeriod,
         resetPeriod,
         settings
     } = useAppStore();
 
+    // -- State --
     const [date, setDate] = useState(new Date(2026, 0, 1));
-    const [isWeekly, setIsWeekly] = useState(false);
-    const period = useMemo(() => formatPeriod(date, isWeekly), [date, isWeekly]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+    const [showProjectSelector, setShowProjectSelector] = useState<{ consultantId: string } | null>(null);
+    const [projectSearch, setProjectSearch] = useState('');
 
+    // -- Calculations --
+    const period = useMemo(() => formatPeriod(date, false), [date]);
+    const monthId = period.id;
+
+    const weeksInMonth = useMemo(() => {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        return Math.ceil(lastDay / 7);
+    }, [date]);
+
+    const weekIds = useMemo(() => {
+        return Array.from({ length: weeksInMonth }, (_, i) => `${monthId}-W${i + 1}`);
+    }, [monthId, weeksInMonth]);
+
+    // -- Handlers --
     const changePeriod = (delta: number) => {
         const newDate = new Date(date);
-        if (isWeekly) {
-            newDate.setDate(newDate.getDate() + (delta * 7));
-        } else {
-            newDate.setMonth(newDate.getMonth() + delta);
-        }
+        newDate.setMonth(newDate.getMonth() + delta);
         setDate(newDate);
     };
 
-    const handleAddProject = async (consultantId: string) => {
-        if (projects.length === 0) return;
-
+    const handleAddProject = async (consultantId: string, projectId: string) => {
         const baseAssignment: Assignment = {
             id: crypto.randomUUID(),
             consultantId,
-            projectId: projects[0].id,
-            hours: 40,
+            projectId,
+            hours: 0,
             status: 'Confirmada',
-            period: period.id,
-            isWeekly,
+            period: monthId,
+            isWeekly: false,
             description: ''
         };
 
-        // 1. Create in SharePoint first
         if (isAuthenticated()) {
             try {
                 const spId = await createAssignmentInSharePoint(baseAssignment, settings.sharePointSiteUrl);
-                console.log('✅ Assignment synced to SharePoint with ID:', spId);
-                const finalAssignment = { ...baseAssignment, sharePointId: spId };
-
-                // 2. Add to local state
-                addAssignment(finalAssignment);
+                addAssignment({ ...baseAssignment, sharePointId: spId });
             } catch (error) {
-                console.error('⚠️ Failed to sync to SharePoint:', error);
-                alert('No se pudo crear la asignación en SharePoint. Operación cancelada.');
+                alert('Error al sincronizar con SharePoint');
             }
         } else {
-            // If not authenticated, we allow local only (though user probably wants consistency)
             addAssignment(baseAssignment);
         }
+        setShowProjectSelector(null);
+        setProjectSearch('');
     };
 
-    const handleDeleteAssignment = async (assignment: Assignment) => {
-        if (!window.confirm('¿Eliminar esta asignación?')) {
-            return;
-        }
-
-        // 1. Delete from SharePoint first
+    const handleUpdateHours = async (assignment: Assignment, newHours: number) => {
+        const updated = { ...assignment, hours: newHours };
         if (isAuthenticated() && assignment.sharePointId) {
             try {
-                await deleteAssignmentInSharePoint(assignment.id, assignment.sharePointId, settings.sharePointSiteUrl);
-                console.log('✅ Assignment deleted from SharePoint');
-            } catch (error) {
-                console.error('⚠️ Failed to delete from SharePoint:', error);
-                alert('Error al eliminar en SharePoint. La operación se ha cancelado localmente.');
-                return; // STOP
-            }
-        }
-
-        // 2. Remove locally
-        removeAssignment(assignment.id);
-    };
-
-    const handleUpdateAssignment = async (updated: Assignment, original: Assignment) => {
-        // 1. Update in SharePoint first if it has an ID
-        if (isAuthenticated() && updated.sharePointId) {
-            try {
                 await updateAssignmentInSharePoint(updated, settings.sharePointSiteUrl);
-                console.log('✅ Assignment updated in SharePoint');
-                // 2. ONLY update local state on success
                 updateAssignment(updated);
             } catch (error) {
-                console.error('⚠️ Failed to update in SharePoint:', error);
-                alert('Error al sincronizar con SharePoint. El cambio ha sido revertido.');
-                // 3. Revert local state if it was changed (though we are doing SP first now)
-                updateAssignment(original);
+                console.error('Failed to sync hours');
             }
         } else {
-            // Fallback for local-only items or not authenticated
             updateAssignment(updated);
         }
     };
 
-    const exportCSV = () => {
-        const headers = ['Consultor', 'Proyecto', 'Horas', 'Estado', 'Descripción'];
-        const rows = assignments
-            .filter(a => a.period === period.id)
-            .map(a => {
-                const c = consultants.find(con => con.id === a.consultantId);
-                const p = projects.find(pro => pro.id === a.projectId);
-                return [c?.name, p?.name, a.hours, a.status, a.description];
-            });
+    const handleDeleteAssignment = async (assignment: Assignment) => {
+        if (!window.confirm('¿Eliminar esta asignación y todas sus semanas asociadas?')) return;
 
-        const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", `planificacion_${period.id}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Note: For simplicity, we delete the specific assignment.
+        // If it's the monthly one, we might want to ask if they want to delete everything.
+        if (isAuthenticated() && assignment.sharePointId) {
+            try {
+                await deleteAssignmentInSharePoint(assignment.id, assignment.sharePointId, settings.sharePointSiteUrl);
+                removeAssignment(assignment.id);
+            } catch (error) {
+                alert('Error al borrar en SharePoint');
+            }
+        } else {
+            removeAssignment(assignment.id);
+        }
     };
 
-    const getSubperiods = () => {
-        if (isWeekly) return [period.id];
-        return [period.id, `${period.id}-W1`, `${period.id}-W2`, `${period.id}-W3`, `${period.id}-W4`, `${period.id}-W5`];
-    };
+    const filteredConsultants = consultants.filter(c =>
+        c.active && c.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const filteredProjects = projects.filter(p =>
+        p.active && (p.name.toLowerCase().includes(projectSearch.toLowerCase()) || p.client?.toLowerCase().includes(projectSearch.toLowerCase()))
+    );
 
     return (
-        <div className="space-y-8 pb-12">
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#f78c38] uppercase tracking-widest">
-                        <CalendarDays size={14} /> Planificación Global
+        <div className="space-y-6 pb-12">
+            {/* Header Compacto */}
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-[#252729] rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <LayoutGrid size={24} />
                     </div>
-                    <h1>Escritorio de Planificación</h1>
-                    <p className="text-gray-500 font-medium">Gestión avanzada de asignaciones para {period.label}</p>
+                    <div>
+                        <h1 className="text-2xl mb-0">Planificación Efectiva</h1>
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            <Clock size={12} className="text-orange-500" />
+                            Gestión de Cargas Netas
+                        </div>
+                    </div>
                 </div>
-                <div className="flex gap-3">
-                    <button onClick={() => copyPeriod('2025-12', period.id, isWeekly)} className="btn btn-outline">
-                        <Copy size={16} /> Copiar Periodo
-                    </button>
-                    <button onClick={exportCSV} className="btn btn-outline">
-                        <Download size={16} /> CSV
-                    </button>
-                    <button onClick={() => resetPeriod(period.id, isWeekly)} className="btn btn-outline text-red-500 border-red-100 hover:bg-red-50 hover:border-red-200">
-                        <Trash size={16} /> Limpiar
-                    </button>
+
+                <div className="flex items-center gap-3">
+                    <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm mr-2">
+                        <button
+                            onClick={() => copyPeriod('2025-12', monthId, false)}
+                            className="p-2.5 hover:bg-orange-50 text-gray-400 hover:text-orange-500 rounded-xl transition-all"
+                            title="Copiar Periodo Anterior"
+                        >
+                            <Copy size={18} />
+                        </button>
+                        <button
+                            onClick={() => {
+                                // Simple CSV export logic (minimal for compactness)
+                                const headers = ['Consultor', 'Proyecto', 'Horas', 'Estado', 'Periodo'];
+                                const rows = assignments
+                                    .filter(a => a.period === monthId || weekIds.includes(a.period))
+                                    .map(a => [
+                                        consultants.find(c => c.id === a.consultantId)?.name,
+                                        projects.find(p => p.id === a.projectId)?.name,
+                                        a.hours,
+                                        a.status,
+                                        a.period
+                                    ]);
+                                const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+                                const blob = new Blob([csv], { type: 'text/csv' });
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `planificacion_${monthId}.csv`;
+                                a.click();
+                            }}
+                            className="p-2.5 hover:bg-orange-50 text-gray-400 hover:text-orange-500 rounded-xl transition-all"
+                            title="Exportar CSV"
+                        >
+                            <Download size={18} />
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (window.confirm('¿Borrar todas las asignaciones de este mes?')) {
+                                    resetPeriod(monthId, false);
+                                    weekIds.forEach(wid => resetPeriod(wid, true));
+                                }
+                            }}
+                            className="p-2.5 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-xl transition-all"
+                            title="Limpiar Mes"
+                        >
+                            <Trash size={18} />
+                        </button>
+                    </div>
+
+                    <div className="flex items-center bg-white p-1 rounded-2xl border border-gray-100 shadow-sm">
+                        <button onClick={() => changePeriod(-1)} className="p-2 hover:bg-gray-50 rounded-xl text-gray-400 transition-all"><ChevronLeft size={20} /></button>
+                        <div className="px-6 font-black text-xs text-gray-800 uppercase tracking-tighter min-w-[140px] text-center">
+                            {period.label}
+                        </div>
+                        <button onClick={() => changePeriod(1)} className="p-2 hover:bg-gray-50 rounded-xl text-gray-400 transition-all"><ChevronRight size={20} /></button>
+                    </div>
+
+                    <div className="relative">
+                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Buscar consultor..."
+                            className="pl-11 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-xs font-bold outline-none focus:ring-4 focus:ring-orange-500/5 transition-all w-64 shadow-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
                 </div>
             </header>
 
-            {/* Premium Period Bar */}
-            <div className="card glass border-0 flex flex-col md:flex-row items-center justify-between py-4 px-6 shadow-premium">
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-3 px-3 py-1 bg-white rounded-xl border border-gray-100 shadow-sm">
-                        <button onClick={() => changePeriod(-1)} className="p-2 hover:bg-gray-50 rounded-lg text-gray-400 transition-all"><ChevronLeft size={20} /></button>
-                        <span className="px-4 font-extrabold text-sm tracking-tighter text-gray-700 min-w-[120px] text-center uppercase">{period.id}</span>
-                        <button onClick={() => changePeriod(1)} className="p-2 hover:bg-gray-50 rounded-lg text-gray-400 transition-all"><ChevronRight size={20} /></button>
-                    </div>
+            {/* Matriz de Planificación */}
+            <div className="space-y-4">
+                {filteredConsultants.map(consultant => {
+                    const occ = getPeriodOccupancy(consultant.id, assignments, absences, monthId, false, settings.includeTentativeByDefault);
+                    const status = getOccupancyStatus(occ.totalHours, settings, false);
+                    const capacity = settings.standardMonthlyCapacity;
 
-                    <div className="flex bg-gray-100/50 p-1 rounded-xl border border-gray-100">
-                        <button
-                            onClick={() => setIsWeekly(false)}
-                            className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${!isWeekly ? 'bg-white text-primary shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                        >
-                            Mensual
-                        </button>
-                        <button
-                            onClick={() => setIsWeekly(true)}
-                            className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${isWeekly ? 'bg-white text-primary shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                        >
-                            Semanal
-                        </button>
-                    </div>
-                </div>
+                    // Group assignments by project for the matrix
+                    const consultantAssignments = assignments.filter(a =>
+                        a.consultantId === consultant.id &&
+                        (a.period === monthId || weekIds.includes(a.period))
+                    );
 
-                <div className="mt-4 md:mt-0 px-4 py-2 bg-orange-50 rounded-xl border border-orange-100 flex items-center gap-3 text-xs font-bold text-orange-600">
-                    <Info size={16} />
-                    <span>Sincronización automática de semanas en total mensual.</span>
-                </div>
-            </div>
-
-            <div className="space-y-8">
-                {consultants.filter(c => c.active).map(consultant => {
-                    const occ = getPeriodOccupancy(consultant.id, assignments, absences, period.id, isWeekly, true);
-                    const status = getOccupancyStatus(occ.totalHours, settings, isWeekly);
-                    const capacity = isWeekly ? settings.standardWeeklyCapacity : settings.standardMonthlyCapacity;
+                    const projectsInScope = Array.from(new Set(consultantAssignments.map(a => a.projectId)));
 
                     return (
-                        <div key={consultant.id} className="card p-0 border-0 shadow-premium overflow-hidden group transition-all duration-300 hover:shadow-2xl hover:shadow-orange-500/5">
-                            <div className="bg-gray-50/50 px-10 py-8 flex items-center justify-between border-b border-gray-100 group-hover:bg-white transition-all">
-                                <div className="flex items-center gap-10">
-                                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-white shadow-lg overflow-hidden">
-                                        <User size={32} />
-                                    </div>
-                                    <div>
-                                        <h4 className="mb-0 text-3xl font-black tracking-tighter text-gray-800">{consultant.name}</h4>
-                                        <div className="flex items-center gap-4 mt-1">
-                                            <span className="text-[11px] text-gray-400 uppercase tracking-[0.25em] font-black">{consultant.role}</span>
-                                            <div className="w-1.5 h-1.5 rounded-full bg-gray-200" />
-                                            <span className={`badge ${getStatusBadgeClass(status)}`}>
-                                                {status}
-                                            </span>
+                        <div key={consultant.id} className="card p-0 border-0 shadow-premium overflow-hidden group">
+                            {/* Consultant Header Minor */}
+                            <div className="bg-gray-50/50 px-6 py-4 flex items-center justify-between border-b border-gray-100 group-hover:bg-white transition-all">
+                                <div className="flex items-center gap-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-white text-xs font-black">
+                                            {consultant.name.split(' ').map(n => n[0]).join('')}
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-black text-gray-800 tracking-tight leading-none">{consultant.name}</div>
+                                            <div className="text-[9px] text-gray-400 uppercase font-bold tracking-widest mt-1">{consultant.role}</div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-12 ml-10 pl-10 border-l border-gray-100">
+
+                                    <div className="h-8 w-px bg-gray-200" />
+
+                                    <div className="flex items-center gap-6">
                                         <div className="space-y-1">
-                                            <div className="text-[11px] text-gray-400 font-black uppercase tracking-widest">Carga Asignada</div>
-                                            <div className="flex items-baseline gap-2">
-                                                <span className="text-3xl font-black text-gray-800 tracking-tighter">{occ.totalHours}h</span>
-                                                <span className="text-sm font-bold text-gray-300">/ {capacity}h</span>
-                                            </div>
+                                            <div className="text-[9px] text-gray-300 font-bold uppercase tracking-widest leading-none">Carga Total</div>
+                                            <div className="text-sm font-black text-gray-700 leading-none">{occ.totalHours}h <span className="text-[10px] text-gray-300">/ {capacity}h</span></div>
                                         </div>
-                                        <div className="w-48 h-3.5 bg-gray-100 rounded-full overflow-hidden border border-gray-100 shadow-inner">
+                                        <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                                             <div
                                                 className={`h-full rounded-full transition-all duration-1000 ${status === 'Sobrecarga' ? 'bg-red-500' : 'bg-orange-500'}`}
                                                 style={{ width: `${Math.min((occ.totalHours / capacity) * 100, 100)}%` }}
                                             />
                                         </div>
+                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${getStatusBadgeClass(status)}`}>
+                                            {status}
+                                        </span>
                                     </div>
                                 </div>
+
                                 <button
-                                    onClick={() => handleAddProject(consultant.id)}
-                                    className="btn btn-primary rounded-xl py-4 px-8 shadow-xl shadow-black/5 hover:shadow-black/10 active:scale-95 transition-all text-sm uppercase tracking-widest"
+                                    onClick={() => setShowProjectSelector({ consultantId: consultant.id })}
+                                    className="p-2 text-orange-500 hover:bg-orange-50 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
                                 >
-                                    <Plus size={20} /> Añadir Proyecto
+                                    <Plus size={14} /> Asignar Proyecto
                                 </button>
                             </div>
 
-                            <div className="p-4 bg-white">
-                                <div className="table-container border-0 rounded-2xl">
-                                    <table>
-                                        <thead>
-                                            <tr className="bg-gray-50/30">
-                                                <th className="px-8 py-4 text-left w-1/3">Proyecto & Cliente</th>
-                                                <th className="px-4 py-4 text-center">Periodo</th>
-                                                <th className="px-4 py-4 text-center">Asignación</th>
-                                                <th className="px-4 py-4 text-center">Estado</th>
-                                                <th className="px-4 py-4 text-left">Notas Técnicas</th>
-                                                <th className="px-8 py-4 text-right"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-50">
-                                            {assignments
-                                                .filter(a => a.consultantId === consultant.id && (isWeekly ? a.period === period.id : (a.period === period.id || a.period.startsWith(`${period.id}-W`))))
-                                                .map(a => (
-                                                    <tr key={a.id} className="group/row transition-all hover:bg-orange-50/30">
-                                                        <td className="px-8 py-4">
-                                                            <select
-                                                                className="w-full p-3.5 bg-transparent border-0 focus:ring-4 focus:ring-orange-500/5 rounded-2xl font-extrabold text-base text-gray-800 cursor-pointer appearance-none hover:bg-white transition-all shadow-none hover:shadow-sm"
-                                                                value={a.projectId}
-                                                                onChange={(e) => handleUpdateAssignment({ ...a, projectId: e.target.value }, a)}
-                                                            >
-                                                                {projects.map(p => (
-                                                                    <option key={p.id} value={p.id}>{p.name} — {p.client}</option>
-                                                                ))}
-                                                            </select>
-                                                        </td>
-                                                        <td className="px-4 py-4 text-center">
-                                                            <select
-                                                                className="px-3 py-1.5 bg-orange-100/50 rounded-lg font-black text-[10px] text-orange-600 uppercase tracking-widest border border-orange-100/50 cursor-pointer hover:bg-orange-100 transition-all"
-                                                                value={a.period}
-                                                                onChange={(e) => handleUpdateAssignment({ ...a, period: e.target.value }, a)}
-                                                            >
-                                                                {getSubperiods().map(sp => (
-                                                                    <option key={sp} value={sp}>{sp}</option>
-                                                                ))}
-                                                            </select>
-                                                        </td>
-                                                        <td className="px-4 py-4 text-center">
-                                                            <div className="flex items-center justify-center gap-3">
-                                                                <input
-                                                                    type="number"
-                                                                    className="w-24 p-3.5 text-center bg-gray-50 rounded-2xl border-0 focus:ring-4 focus:ring-orange-500/5 font-black text-lg text-gray-800 transition-all shadow-inner"
-                                                                    value={a.hours}
-                                                                    onChange={(e) => updateAssignment({ ...a, hours: parseInt(e.target.value) || 0 })}
-                                                                    onBlur={() => handleUpdateAssignment(a, assignments.find(prev => prev.id === a.id)!)}
-                                                                />
-                                                                <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest">HRS</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-4 text-center">
-                                                            <select
-                                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border ${a.status === 'Confirmada' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}
-                                                                value={a.status}
-                                                                onChange={(e) => handleUpdateAssignment({ ...a, status: e.target.value as any }, a)}
-                                                            >
-                                                                <option value="Confirmada">Confirmada</option>
-                                                                <option value="Tentativa">Tentativa</option>
-                                                            </select>
-                                                        </td>
-                                                        <td className="px-4 py-4">
+                            {/* Matrix Table */}
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse">
+                                    <thead>
+                                        <tr className="bg-white/50 text-[9px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50">
+                                            <th className="px-6 py-3 text-left w-64">Proyecto / Cliente</th>
+                                            <th className="px-3 py-3 text-center bg-gray-50/50 w-20">MES</th>
+                                            {weekIds.map((_, i) => (
+                                                <th key={i} className="px-3 py-3 text-center w-20 border-l border-gray-50">W{i + 1}</th>
+                                            ))}
+                                            <th className="px-6 py-3 text-right">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {projectsInScope.map(pid => {
+                                            const p = projects.find(pro => pro.id === pid);
+                                            const monthlyAsig = consultantAssignments.find(a => a.projectId === pid && a.period === monthId);
+
+                                            return (
+                                                <tr key={pid} className="hover:bg-orange-50/10 transition-colors group/row">
+                                                    <td className="px-6 py-3">
+                                                        <div className="text-sm font-bold text-gray-700">{p?.name}</div>
+                                                        <div className="text-[10px] text-gray-400 font-medium">{p?.client}</div>
+                                                    </td>
+
+                                                    {/* Monthly Column */}
+                                                    <td className="px-2 py-2 bg-gray-50/30">
+                                                        <div className="flex items-center justify-center relative">
                                                             <input
-                                                                type="text"
-                                                                placeholder="Detalles de la tarea..."
-                                                                className="w-full p-3.5 bg-transparent border-0 focus:ring-4 focus:ring-orange-500/5 rounded-2xl text-sm font-bold text-gray-600 italic placeholder:text-gray-300 hover:bg-white transition-all"
-                                                                value={a.description}
-                                                                onChange={(e) => updateAssignment({ ...a, description: e.target.value })}
-                                                                onBlur={() => handleUpdateAssignment(a, assignments.find(prev => prev.id === a.id)!)}
+                                                                type="number"
+                                                                className={`w-16 p-2 text-center text-xs font-black bg-white rounded-lg border-2 transition-all outline-none ${monthlyAsig ? 'border-orange-200' : 'border-dashed border-gray-200 opacity-30 hover:opacity-100'}`}
+                                                                value={monthlyAsig?.hours || 0}
+                                                                onChange={(e) => {
+                                                                    const h = parseInt(e.target.value) || 0;
+                                                                    if (monthlyAsig) {
+                                                                        handleUpdateHours(monthlyAsig, h);
+                                                                    } else if (h > 0) {
+                                                                        // Auto-create monthly assignment if typing in empty box
+                                                                        handleAddProject(consultant.id, pid);
+                                                                    }
+                                                                }}
                                                             />
-                                                        </td>
-                                                        <td className="px-8 py-4 text-right">
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Weekly Columns */}
+                                                    {weekIds.map((wid, idx) => {
+                                                        const weeklyAsig = consultantAssignments.find(a => a.projectId === pid && a.period === wid);
+                                                        return (
+                                                            <td key={idx} className="px-2 py-2 border-l border-gray-50">
+                                                                <div className="flex items-center justify-center">
+                                                                    <input
+                                                                        type="number"
+                                                                        className={`w-14 p-2 text-center text-[11px] font-bold bg-transparent rounded-lg hover:bg-white border-b-2 border-transparent hover:border-orange-200 transition-all outline-none ${weeklyAsig ? 'text-gray-800' : 'text-gray-200'}`}
+                                                                        placeholder="0"
+                                                                        value={weeklyAsig?.hours || ''}
+                                                                        onChange={async (e) => {
+                                                                            const h = parseInt(e.target.value) || 0;
+                                                                            if (weeklyAsig) {
+                                                                                handleUpdateHours(weeklyAsig, h);
+                                                                            } else if (h > 0) {
+                                                                                // Automatic creation of weekly assignment
+                                                                                const newA: Assignment = {
+                                                                                    id: crypto.randomUUID(),
+                                                                                    consultantId: consultant.id,
+                                                                                    projectId: pid,
+                                                                                    hours: h,
+                                                                                    status: 'Confirmada',
+                                                                                    period: wid,
+                                                                                    isWeekly: true
+                                                                                };
+                                                                                if (isAuthenticated()) {
+                                                                                    const spId = await createAssignmentInSharePoint(newA, settings.sharePointSiteUrl);
+                                                                                    addAssignment({ ...newA, sharePointId: spId });
+                                                                                } else {
+                                                                                    addAssignment(newA);
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            </td>
+                                                        );
+                                                    })}
+
+                                                    <td className="px-6 py-3 text-right">
+                                                        <div className="flex items-center justify-end gap-1 opacity-0 group-row:opacity-100 transition-opacity">
                                                             <button
-                                                                onClick={() => handleDeleteAssignment(a)}
-                                                                className="p-2.5 text-gray-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover/row:opacity-100"
+                                                                onClick={() => setSelectedAssignment(monthlyAsig || consultantAssignments.find(a => a.projectId === pid)!)}
+                                                                className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                                                                title="Detalles y Notas"
                                                             >
-                                                                <Trash2 size={16} />
+                                                                <Maximize2 size={14} />
                                                             </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            {assignments.filter(a => a.consultantId === consultant.id && (isWeekly ? a.period === period.id : (a.period === period.id || a.period.startsWith(`${period.id}-W`)))).length === 0 && (
-                                                <tr>
-                                                    <td colSpan={6} className="px-8 py-10 text-center">
-                                                        <div className="flex flex-col items-center gap-3">
-                                                            <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-200">
-                                                                <Plus size={20} />
-                                                            </div>
-                                                            <div className="text-xs font-bold text-gray-300 uppercase tracking-widest">Sin asignaciones registradas</div>
+                                                            <button
+                                                                onClick={() => {
+                                                                    // Delete all related to this project for this consultant in this month
+                                                                    if (window.confirm('¿Eliminar todas las asignaciones de este proyecto para el consultor en este mes?')) {
+                                                                        consultantAssignments.filter(a => a.projectId === pid).forEach(a => handleDeleteAssignment(a));
+                                                                    }
+                                                                }}
+                                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                            );
+                                        })}
+
+                                        {projectsInScope.length === 0 && (
+                                            <tr>
+                                                <td colSpan={7 + weeksInMonth} className="px-6 py-6 text-center text-[10px] font-bold text-gray-300 uppercase tracking-widest italic">
+                                                    Sin asignaciones activas
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     );
                 })}
             </div>
+
+            {/* Modal de Selector de Proyectos con Búsqueda */}
+            {showProjectSelector && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl shadow-black/40 overflow-hidden">
+                        <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                            <div>
+                                <h3 className="mb-0 text-xl font-black tracking-tight text-gray-800">Seleccionar Proyecto</h3>
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Añadir nueva asignación</p>
+                            </div>
+                            <button onClick={() => setShowProjectSelector(null)} className="p-3 hover:bg-white rounded-2xl transition-all border border-transparent hover:border-gray-200">
+                                <X size={20} className="text-gray-400" />
+                            </button>
+                        </div>
+
+                        <div className="p-8">
+                            <div className="relative mb-6">
+                                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
+                                <input
+                                    type="text"
+                                    placeholder="Escribe el nombre del proyecto o cliente..."
+                                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border-0 rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
+                                    autoFocus
+                                    value={projectSearch}
+                                    onChange={(e) => setProjectSearch(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="max-h-64 overflow-y-auto space-y-2 pr-2 scrollbar-thin">
+                                {filteredProjects.map(p => (
+                                    <button
+                                        key={p.id}
+                                        onClick={() => handleAddProject(showProjectSelector.consultantId, p.id)}
+                                        className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-orange-50 transition-all border-2 border-transparent hover:border-orange-100 text-left group"
+                                    >
+                                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-orange-500 group-hover:text-white transition-all">
+                                            {p.name[0]}
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-black text-gray-800 tracking-tight">{p.name}</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{p.client}</div>
+                                        </div>
+                                        <Plus size={16} className="ml-auto text-gray-300 group-hover:text-orange-500 transition-all" />
+                                    </button>
+                                ))}
+                                {filteredProjects.length === 0 && (
+                                    <div className="text-center py-10 text-gray-400 text-xs font-bold uppercase tracking-widest">No se encontraron proyectos</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Detalles de Asignación */}
+            {selectedAssignment && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in zoom-in-95 duration-200">
+                    <div className="bg-white rounded-[40px] w-full max-w-xl shadow-2xl shadow-black/50 overflow-hidden">
+                        <div className="h-2 bg-gradient-to-r from-orange-500 to-pink-500" />
+                        <div className="p-10">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2 text-[10px] font-black text-orange-500 uppercase tracking-[0.2em]">
+                                        <Info size={14} /> Ficha de Asignación
+                                    </div>
+                                    <h2 className="text-3xl font-black tracking-tighter text-gray-900">
+                                        {projects.find(p => p.id === selectedAssignment.projectId)?.name}
+                                    </h2>
+                                    <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">
+                                        Periodo: <span className="text-gray-800">{selectedAssignment.period}</span>
+                                    </p>
+                                </div>
+                                <button onClick={() => setSelectedAssignment(null)} className="p-4 hover:bg-gray-50 rounded-3xl transition-all">
+                                    <X size={24} className="text-gray-300" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-8">
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-3">
+                                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">Estado de la Carga</label>
+                                        <select
+                                            className={`w-full p-4 rounded-3xl border-0 font-black text-xs uppercase tracking-widest transition-all outline-none appearance-none ${selectedAssignment.status === 'Confirmada' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600'}`}
+                                            value={selectedAssignment.status}
+                                            onChange={(e) => {
+                                                const updated = { ...selectedAssignment, status: e.target.value as any };
+                                                setSelectedAssignment(updated);
+                                                handleUpdateHours(updated, selectedAssignment.hours);
+                                            }}
+                                        >
+                                            <option value="Confirmada">✅ Confirmada</option>
+                                            <option value="Tentativa">📋 Tentativa</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">Horas Asignadas</label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                className="w-full p-4 bg-gray-50 border-0 rounded-3xl text-sm font-black focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all outline-none"
+                                                value={selectedAssignment.hours}
+                                                onChange={(e) => {
+                                                    const h = parseInt(e.target.value) || 0;
+                                                    const updated = { ...selectedAssignment, hours: h };
+                                                    setSelectedAssignment(updated);
+                                                }}
+                                                onBlur={() => handleUpdateHours(selectedAssignment, selectedAssignment.hours)}
+                                            />
+                                            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-300 tracking-widest">HRS</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">Notas Técnicas / Alcance</label>
+                                    <textarea
+                                        className="w-full p-6 bg-gray-50 border-0 rounded-[32px] text-sm font-medium text-gray-700 min-h-[160px] focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all outline-none resize-none"
+                                        placeholder="Define las tareas específicas o entregables..."
+                                        value={selectedAssignment.description}
+                                        onChange={(e) => {
+                                            const updated = { ...selectedAssignment, description: e.target.value };
+                                            setSelectedAssignment(updated);
+                                        }}
+                                        onBlur={() => handleUpdateHours(selectedAssignment, selectedAssignment.hours)}
+                                    ></textarea>
+                                </div>
+
+                                <div className="pt-4">
+                                    <button
+                                        onClick={() => setSelectedAssignment(null)}
+                                        className="w-full py-5 bg-gray-900 text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl shadow-black/20 hover:bg-black transition-all active:scale-95"
+                                    >
+                                        Cerrar y Sincronizar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
