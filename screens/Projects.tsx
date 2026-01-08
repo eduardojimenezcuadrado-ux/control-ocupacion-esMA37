@@ -372,63 +372,90 @@ const Projects: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-                    {filteredProjects.map(p => {
-                        const projectAssignments = assignments.filter(a => (a.period === periodId || a.period.startsWith(`${periodId}-W`)) && a.projectId === p.id);
-                        const totalHours = projectAssignments.reduce((sum, a) => sum + a.hours, 0);
-
-                        return (
-                            <div key={p.id} className="card group hover:shadow-2xl transition-all duration-500 cursor-pointer border-0 overflow-hidden relative" onClick={() => setSelectedProject(p)}>
-                                <div className="absolute top-0 right-0 p-4 transform translate-x-1 translate-y--1 group-hover:translate-x-0 group-hover:translate-y-0 transition-all">
-                                    <div className={`w-2 h-2 rounded-full ${p.active ? 'bg-green-500 shadow-[0_0_8px_green]' : 'bg-gray-200'}`} />
-                                </div>
-
-                                <div className="flex flex-col h-full space-y-6">
-                                    <div className="space-y-1">
-                                        <div className="flex items-center justify-between">
-                                            <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${p.type === 'Cliente' ? 'text-blue-500' : 'text-orange-500'}`}>{p.type}</span>
-                                            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-200 group-hover:bg-gray-800 group-hover:text-white transition-all">
-                                                <Briefcase size={14} />
-                                            </div>
+                <div className="table-container border-0 shadow-premium">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th className="px-8 flex-1">Iniciativa / Proyecto</th>
+                                <th>Modalidad</th>
+                                <th className="text-center">Inversión (h)</th>
+                                <th className="text-center">Equipo</th>
+                                <th>Estatus</th>
+                                <th className="text-right px-8"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {filteredProjects.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="py-20 text-center">
+                                        <div className="flex flex-col items-center justify-center gap-4 text-gray-300">
+                                            <LayoutGrid size={48} strokeWidth={1} />
+                                            <span className="text-sm font-bold uppercase tracking-widest">No se encontraron proyectos activos.</span>
                                         </div>
-                                        <h3 className="mb-0 text-2xl font-black tracking-tighter text-gray-800 line-clamp-1 group-hover:text-[#f78c38] transition-colors">{p.name}</h3>
-                                        <div className="flex items-center gap-2 text-[11px] font-black text-gray-400 uppercase tracking-widest mt-1">
-                                            <Building2 size={12} className="text-gray-300" /> {p.client || 'Internal Operations'}
-                                        </div>
-                                    </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredProjects.map(p => {
+                                    const projectAssignments = assignments.filter(a => (a.period === periodId || a.period.startsWith(`${periodId}-W`)) && a.projectId === p.id);
+                                    const totalHours = projectAssignments.reduce((sum, a) => sum + a.hours, 0);
+                                    const teamSize = new Set(projectAssignments.map(a => a.consultantId)).size;
 
-                                    <div className="flex items-center gap-6 pt-4 border-t border-gray-50">
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-2 bg-gray-50 rounded-lg group-hover:bg-white transition-all">
-                                                <Clock size={14} className="text-gray-400 group-hover:text-primary transition-all" />
-                                            </div>
-                                            <div>
-                                                <div className="text-[10px] text-gray-300 font-bold uppercase tracking-widest">Inversión</div>
-                                                <div className="font-extrabold text-sm">{totalHours}h</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-2 bg-gray-50 rounded-lg group-hover:bg-white transition-all">
-                                                <Users size={14} className="text-gray-400 group-hover:text-primary transition-all" />
-                                            </div>
-                                            <div>
-                                                <div className="text-[10px] text-gray-300 font-bold uppercase tracking-widest">Equipo</div>
-                                                <div className="font-extrabold text-sm">{new Set(projectAssignments.map(a => a.consultantId)).size}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#f78c38] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                        );
-                    })}
-                    {filteredProjects.length === 0 && (
-                        <div className="col-span-1 md:col-span-2 lg:col-span-3 py-20 card flex flex-col items-center justify-center gap-4 text-gray-200">
-                            <LayoutGrid size={48} strokeWidth={1} />
-                            <span className="text-sm font-bold uppercase tracking-widest text-gray-300">No se encontraron proyectos activos con esos parámetros.</span>
-                        </div>
-                    )}
+                                    return (
+                                        <tr
+                                            key={p.id}
+                                            className="group cursor-pointer hover:bg-gray-50/50 transition-all"
+                                            onClick={() => setSelectedProject(p)}
+                                        >
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-6">
+                                                    <div className="w-14 h-14 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl flex items-center justify-center text-gray-400 group-hover:from-orange-500 group-hover:to-orange-400 group-hover:text-white transition-all shadow-sm border border-gray-100 group-hover:border-transparent">
+                                                        <Briefcase size={22} />
+                                                    </div>
+                                                    <div className="max-w-[300px] lg:max-w-md xl:max-w-xl">
+                                                        <div className="font-black text-gray-800 tracking-tighter text-xl truncate">{p.name}</div>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <Building2 size={12} className="text-gray-300" />
+                                                            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{p.client || 'Operaciones Internas'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${p.type === 'Cliente' ? 'bg-blue-50 text-blue-500 border-blue-100' : 'bg-orange-50 text-orange-500 border-orange-100'}`}>
+                                                    {p.type}
+                                                </span>
+                                            </td>
+                                            <td className="text-center">
+                                                <div className="flex items-center justify-center gap-1.5 font-black text-gray-700">
+                                                    <span className="text-lg">{totalHours}</span>
+                                                    <span className="text-[10px] text-gray-300">h</span>
+                                                </div>
+                                            </td>
+                                            <td className="text-center">
+                                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-lg text-xs font-black text-gray-500 border border-gray-100 group-hover:bg-white transition-all">
+                                                    <Users size={12} className="text-gray-400" />
+                                                    {teamSize} Per.
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-2 h-2 rounded-full ${p.active ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)] animate-pulse' : 'bg-gray-200'}`} />
+                                                    <span className={`text-[11px] font-bold uppercase tracking-widest ${p.active ? 'text-green-600' : 'text-gray-400'}`}>
+                                                        {p.active ? 'Ejecutando' : 'Cerrado'}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="text-right px-8">
+                                                <div className="w-10 h-10 rounded-full flex items-center justify-center text-gray-100 group-hover:bg-orange-500 group-hover:text-white transition-all duration-500 shadow-none group-hover:shadow-lg group-hover:shadow-orange-500/20 translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100">
+                                                    <ChevronRight size={20} />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
             )}
