@@ -1,5 +1,5 @@
 import { PublicClientApplication, AccountInfo, AuthenticationResult } from '@azure/msal-browser';
-import { Consultant, Project, Assignment, ProjectType, AssignmentStatus } from '../types';
+import { Consultant, Project, Assignment, Absence, ProjectType, AssignmentStatus, AbsenceCategory } from '../types';
 import { SP_LISTS, getDefaultSharePointConfig } from './sharepointConfig';
 
 let msalInstance: PublicClientApplication | null = null;
@@ -336,20 +336,43 @@ export const fetchAssignments = async (siteUrl?: string): Promise<Assignment[]> 
 };
 
 /**
- * Fetch all data from SharePoint (Consultants, Projects, Assignments)
+ * Fetch absences from SP_Ausencias
+ */
+export const fetchAbsences = async (siteUrl?: string): Promise<Absence[]> => {
+    const config = getDefaultSharePointConfig();
+    const url = siteUrl || config.siteUrl;
+
+    const items = await fetchSharePointListData(url, SP_LISTS.AUSENCIAS);
+
+    return items.map((item: any) => ({
+        id: item.Title || crypto.randomUUID(),
+        consultantId: item.ConsultantLookup || '',
+        category: (item.Category as AbsenceCategory) || 'Vacaciones',
+        hours: parseFloat(item.Hours) || 0,
+        period: item.Period || '',
+        isWeekly: item.IsWeekly === true || item.IsWeekly === 'true' || item.Period?.includes('W'),
+        notes: item.Notes || '',
+        sharePointId: item._itemId,
+    }));
+};
+
+/**
+ * Fetch all data from SharePoint (Consultants, Projects, Assignments, Absences)
  */
 export const fetchAllSharePointData = async (siteUrl?: string): Promise<{
     consultants: Consultant[];
     projects: Project[];
     assignments: Assignment[];
+    absences: Absence[];
 }> => {
-    const [consultants, projects, assignments] = await Promise.all([
+    const [consultants, projects, assignments, absences] = await Promise.all([
         fetchConsultants(siteUrl),
         fetchProjects(siteUrl),
         fetchAssignments(siteUrl),
+        fetchAbsences(siteUrl),
     ]);
 
-    return { consultants, projects, assignments };
+    return { consultants, projects, assignments, absences };
 };
 
 // ============ WRITE OPERATIONS ============
@@ -643,6 +666,45 @@ export const deleteAssignmentInSharePoint = async (assignmentId: string, sharePo
 
     await deleteListItem(siteId, listId, sharePointId);
     console.log('Assignment deleted from SharePoint:', assignmentId);
+};
+
+/**
+ * Create an absence in SP_Ausencias
+ */
+export const createAbsenceInSharePoint = async (absence: Absence, siteUrl?: string): Promise<string> => {
+    const config = getDefaultSharePointConfig();
+    const url = siteUrl || config.siteUrl;
+
+    const siteId = await getSiteId(url);
+    const listId = await getListId(siteId, SP_LISTS.AUSENCIAS);
+
+    const fields = {
+        Title: absence.id,
+        ConsultantLookup: absence.consultantId,
+        Category: absence.category,
+        Hours: absence.hours,
+        Period: absence.period,
+        IsWeekly: absence.isWeekly,
+        Notes: absence.notes || '',
+    };
+
+    const result = await createListItem(siteId, listId, fields);
+    console.log('Absence created in SharePoint:', absence.id);
+    return result.id;
+};
+
+/**
+ * Delete an absence from SP_Ausencias
+ */
+export const deleteAbsenceInSharePoint = async (absenceId: string, sharePointId: string, siteUrl?: string): Promise<void> => {
+    const config = getDefaultSharePointConfig();
+    const url = siteUrl || config.siteUrl;
+
+    const siteId = await getSiteId(url);
+    const listId = await getListId(siteId, SP_LISTS.AUSENCIAS);
+
+    await deleteListItem(siteId, listId, sharePointId);
+    console.log('Absence deleted from SharePoint:', absenceId);
 };
 
 /**

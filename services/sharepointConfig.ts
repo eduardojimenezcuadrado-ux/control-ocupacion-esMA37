@@ -61,6 +61,7 @@ export const SP_LISTS = {
     CONSULTORES: 'SP_Consultores',
     PROYECTOS: 'SP_Proyectos',
     ASIGNACIONES: 'SP_Asignaciones',
+    AUSENCIAS: 'SP_Ausencias',
 } as const;
 
 /**
