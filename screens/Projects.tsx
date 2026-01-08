@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { Project, ProjectType } from '../types';
 import { formatPeriod } from '../utils/calculations';
-import { createProjectInSharePoint, deleteProjectInSharePoint, isAuthenticated } from '../services/sharepointService';
+import { createProjectInSharePoint, deleteProjectInSharePoint, updateProjectInSharePoint, isAuthenticated } from '../services/sharepointService';
 
 const Projects: React.FC = () => {
     const { projects, setProjects, assignments, consultants, settings } = useAppStore();
@@ -49,19 +49,21 @@ const Projects: React.FC = () => {
             return;
         }
 
-        const updatedProjects = projects.filter(p => p.id !== project.id);
-        setProjects(updatedProjects);
-
+        // 1. Delete from SharePoint first
         if (isAuthenticated() && project.sharePointId) {
             try {
                 await deleteProjectInSharePoint(project.id, project.sharePointId, settings.sharePointSiteUrl);
                 console.log('✅ Project deleted from SharePoint');
             } catch (error) {
                 console.error('⚠️ Failed to delete project from SharePoint', error);
-                alert('El proyecto se eliminó localmente, pero hubo un error al eliminarlo de SharePoint.');
+                alert('No se pudo eliminar el proyecto de SharePoint. La operación local se ha cancelado.');
+                return; // STOP
             }
         }
 
+        // 2. Update local state
+        const updatedProjects = projects.filter(p => p.id !== project.id);
+        setProjects(updatedProjects);
         setIsEditing(false);
         setSelectedProject(null);
     };
@@ -79,19 +81,40 @@ const Projects: React.FC = () => {
         };
 
         if (selectedProject) {
-            setProjects(prev => prev.map(p => p.id === projectData.id ? projectData : p));
-        } else {
-            setProjects(prev => [...prev, projectData]);
+            const updatedProject = { ...projectData, sharePointId: selectedProject.sharePointId };
 
-            // Sync to SharePoint if authenticated
-            if (isAuthenticated()) {
+            // 1. Sync update to SharePoint first
+            if (isAuthenticated() && selectedProject.sharePointId) {
                 try {
-                    await createProjectInSharePoint(projectData, settings.sharePointSiteUrl);
-                    console.log('✅ Project synced to SharePoint');
+                    await updateProjectInSharePoint(updatedProject, settings.sharePointSiteUrl);
+                    console.log('✅ Project update synced to SharePoint');
                 } catch (error) {
-                    console.error('⚠️ Failed to sync to SharePoint:', error);
+                    console.error('⚠️ Failed to sync update to SharePoint:', error);
+                    alert('Error al actualizar en SharePoint. No se han guardado los cambios.');
+                    return; // STOP
                 }
             }
+
+            // 2. Update local state
+            setProjects(prev => prev.map(p => p.id === projectData.id ? updatedProject : p));
+        } else {
+            let finalProject = { ...projectData };
+
+            // 1. Sync creation to SharePoint first
+            if (isAuthenticated()) {
+                try {
+                    const spId = await createProjectInSharePoint(projectData, settings.sharePointSiteUrl);
+                    console.log('✅ Project created in SharePoint with ID:', spId);
+                    finalProject.sharePointId = spId;
+                } catch (error) {
+                    console.error('⚠️ Failed to sync to SharePoint:', error);
+                    alert('Error al crear en SharePoint. El proyecto no se ha guardado.');
+                    return; // STOP
+                }
+            }
+
+            // 2. Update local state
+            setProjects(prev => [...prev, finalProject]);
         }
         setIsEditing(false);
         setSelectedProject(null);

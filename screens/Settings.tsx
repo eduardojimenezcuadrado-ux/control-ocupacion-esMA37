@@ -158,14 +158,36 @@ const SettingsScreen: React.FC = () => {
                             </div>
                         )}
 
-                        <button
-                            onClick={handleManualSync}
-                            disabled={isSyncing}
-                            className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-black uppercase tracking-[0.15em] text-xs hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-500/20 flex items-center justify-center gap-3 disabled:opacity-50"
-                        >
-                            {isSyncing ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                            {isSyncing ? 'Sincronizando...' : 'Actualizar desde SharePoint'}
-                        </button>
+                        <div className="flex flex-col md:flex-row gap-3">
+                            <button
+                                onClick={handleManualSync}
+                                disabled={isSyncing}
+                                className="flex-1 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-black uppercase tracking-[0.15em] text-xs hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-500/20 flex items-center justify-center gap-3 disabled:opacity-50"
+                            >
+                                {isSyncing ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                                {isSyncing ? 'Sincronizar Datos' : 'Actualizar Todo'}
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setIsSyncing(true);
+                                    setSyncError(null);
+                                    try {
+                                        if (!isAuthenticated()) await authenticateUser();
+                                        const url = formData.sharePointSiteUrl || getDefaultSharePointConfig().siteUrl;
+                                        await fetchAllSharePointData(url);
+                                        alert('✅ Conexión establecida y listas verificadas con éxito.');
+                                    } catch (e: any) {
+                                        setSyncError(e.message);
+                                    } finally {
+                                        setIsSyncing(false);
+                                    }
+                                }}
+                                disabled={isSyncing}
+                                className="px-6 py-4 bg-white border-2 border-green-500/20 text-green-600 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-50 transition-all disabled:opacity-50"
+                            >
+                                Probar Conexión
+                            </button>
+                        </div>
                     </div>
 
                     {/* Gemini AI Integration Card */}
