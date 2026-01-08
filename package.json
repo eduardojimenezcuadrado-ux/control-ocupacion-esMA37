@@ -9,21 +9,26 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@azure/msal-browser": "^4.26.2",
-    "@azure/msal-react": "^3.0.23",
+    "@azure/msal-browser": "^3.10.0",
+    "@azure/msal-react": "^2.0.12",
     "@google/genai": "^1.30.0",
-    "lucide-react": "^0.555.0",
-    "papaparse": "^5.5.3",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-markdown": "^10.1.0",
-    "recharts": "^3.5.0",
+    "lucide-react": "^0.344.0",
+    "papaparse": "^5.4.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1",
+    "recharts": "^2.12.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "@types/node": "^20.11.19",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.18",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.4"
   }
 }
