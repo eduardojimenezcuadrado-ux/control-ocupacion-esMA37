@@ -1,8 +1,8 @@
 import { AppState, Consultant, Project, Assignment, Absence, AppSettings } from './types';
 
 export const initialSettings: AppSettings = {
-    benchMonthlyThreshold: 120,
-    benchWeeklyThreshold: 30,
+    availableMonthlyThreshold: 120,
+    availableWeeklyThreshold: 30,
     standardMonthlyCapacity: 160,
     standardWeeklyCapacity: 40,
     defaultView: 'Mensual',
@@ -40,7 +40,7 @@ export const assignments: Assignment[] = [
     { id: 'a1', consultantId: 'c1', projectId: 'p1', hours: 140, status: 'Confirmada', period: '2026-01', isWeekly: false, description: 'Arquitectura base' },
     { id: 'a2', consultantId: 'c1', projectId: 'p3', hours: 40, status: 'Tentativa', period: '2026-01', isWeekly: false, description: 'Revisión técnica' },
 
-    // Bench example: Rafael
+    // Disponible example: Rafael
     { id: 'a3', consultantId: 'c11', projectId: 'p5', hours: 80, status: 'Confirmada', period: '2026-01', isWeekly: false },
 
     // Normal load
