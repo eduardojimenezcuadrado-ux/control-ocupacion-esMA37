@@ -1,4 +1,4 @@
-export type ProjectType = 'Cliente' | 'Interno' | 'Ausencia';
+export type ProjectType = 'Cliente' | 'Interno' | 'Ausencia' | 'Tentativo';
 export type AssignmentStatus = 'Confirmada' | 'Tentativa';
 export type AbsenceCategory = 'Vacaciones' | 'Festivos' | 'Baja médica' | 'Asuntos personales';
 
