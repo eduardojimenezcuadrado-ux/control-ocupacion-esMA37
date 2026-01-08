@@ -50,6 +50,15 @@ const Planning: React.FC = () => {
     const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
     const [showProjectSelector, setShowProjectSelector] = useState<{ consultantId: string } | null>(null);
     const [projectSearch, setProjectSearch] = useState('');
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+    // Auto-dismiss toast
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast]);
 
     // -- Calculations --
     const period = useMemo(() => formatPeriod(date, false), [date]);
@@ -103,10 +112,10 @@ const Planning: React.FC = () => {
                     updateAssignment({ ...a, sharePointId: spId });
                 }
             }
-            alert('✅ Fila sincronizada con SharePoint');
+            setToast({ message: 'Fila sincronizada con SharePoint', type: 'success' });
         } catch (error) {
             console.error('Error syncing row:', error);
-            alert('❌ Error al sincronizar con SharePoint');
+            setToast({ message: 'Error al sincronizar con SharePoint', type: 'error' });
         }
     };
 
@@ -375,7 +384,7 @@ const Planning: React.FC = () => {
                                                                 className="p-2.5 bg-orange-500 text-white rounded-xl shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-4"
                                                                 title="Sincronizar esta fila con SharePoint"
                                                             >
-                                                                <CheckCircle2 size={14} /> Añadir
+                                                                <CheckCircle2 size={14} /> Guardar
                                                             </button>
                                                             <button
                                                                 onClick={() => setSelectedAssignment(monthlyAsig || consultantAssignments.find(a => a.projectId === pid)!)}
@@ -553,6 +562,14 @@ const Planning: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Notification Toast */}
+            {toast && (
+                <div className={`fixed bottom-8 right-8 z-[200] p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 duration-300 ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                    {toast.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+                    <span className="text-sm font-bold">{toast.message}</span>
                 </div>
             )}
         </div>
