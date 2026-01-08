@@ -4,26 +4,19 @@ import {
     Settings as SettingsIcon,
     Save,
     Info,
-    Shield,
     Zap,
     Smartphone,
     CheckCircle2,
-    Cpu,
-    Fingerprint,
-    Globe,
-    Lock,
     Eye,
-    ChevronRight,
     Gauge,
     Cloud,
     Download,
     Database,
-    X,
     Loader2
 } from 'lucide-react';
-import { Consultant, Project, Assignment } from '../types';
 import { authenticateUser, fetchAllSharePointData, isAuthenticated, getCurrentUser } from '../services/sharepointService';
 import { getDefaultSharePointConfig } from '../services/sharepointConfig';
+
 
 const SettingsScreen: React.FC = () => {
     const { settings, setSettings, loadSharePointData } = useAppStore();
@@ -280,64 +273,7 @@ const SettingsScreen: React.FC = () => {
                         </div>
                     </div>
                 </div>
-
-                <div className="lg:col-span-5 space-y-8">
-                    <div className="card bg-gradient-to-br from-[#252729] to-black text-white border-0 shadow-2xl relative overflow-hidden group">
-                        <div className="absolute -right-8 -bottom-8 opacity-10 group-hover:scale-110 transition-transform duration-1000">
-                            <Cpu size={240} strokeWidth={1} />
-                        </div>
-                        <div className="relative z-10 space-y-8">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-white/5 backdrop-blur-md rounded-2xl text-[#f78c38]">
-                                    <Zap size={24} />
-                                </div>
-                                <div>
-                                    <h3 className="text-white mb-0 text-xl font-black">Roadmap v2.0</h3>
-                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Planificación Estratégica</p>
-                                </div>
-                            </div>
-
-                            <div className="space-y-6">
-                                {[
-                                    { id: 1, title: 'SharePoint Native Sync', desc: 'Conexión bidireccional con listas de proyectos corporativos.', status: 'Activo' },
-                                    { id: 2, title: 'Skill Cloud Engine', desc: 'Sugerencias de asignación basadas en grafos de habilidades.', status: 'Planeado' },
-                                    { id: 3, title: 'Multi-Tenant Auth', desc: 'Acceso seguro vía Azure AD / Microsoft Entra ID.', status: 'Backlog' }
-                                ].map(item => (
-                                    <div key={item.id} className="flex gap-4 group/item">
-                                        <div className="flex-shrink-0 w-8 h-8 bg-white/5 rounded-xl border border-white/5 flex items-center justify-center text-[10px] font-black group-hover/item:bg-[#f78c38] transition-all">
-                                            {item.id}
-                                        </div>
-                                        <div className="flex-1 border-b border-white/5 pb-4 group-hover/item:border-white/10 transition-all">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <div className="text-sm font-extrabold text-white">{item.title}</div>
-                                                <span className={`text-[8px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full ${item.status === 'Activo' ? 'bg-green-500/20 text-green-400' : 'bg-white/5 text-gray-500'}`}>{item.status}</span>
-                                            </div>
-                                            <div className="text-[11px] font-medium text-gray-400 group-hover/item:text-gray-300 transition-colors">{item.desc}</div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <button className="w-full py-4 bg-orange-500 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:bg-orange-400 transition-all shadow-xl shadow-orange-500/20 active:scale-95">
-                                Explorar Vision Board
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="card bg-gray-50/30 border-2 border-dashed border-gray-100 flex flex-col items-center justify-center py-12 text-center group hover:border-[#f78c38]/20 transition-all">
-                        <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <Fingerprint className="text-gray-200 group-hover:text-orange-300" size={32} />
-                        </div>
-                        <h4 className="text-gray-400 mb-1 font-black uppercase tracking-widest text-[10px]">Identidad de Herramienta</h4>
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="px-3 py-1 bg-white rounded-lg text-xs font-black text-gray-800 shadow-sm border border-gray-100">RAONA v1.1.0</span>
-                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        </div>
-                        <p className="text-gray-300 text-[10px] font-bold max-w-[200px] leading-snug">Todos los procesos de cálculo se ejecutan localmente bajo cifrado de sesión.</p>
-                    </div>
-                </div>
             </div>
-
         </div>
     );
 };
