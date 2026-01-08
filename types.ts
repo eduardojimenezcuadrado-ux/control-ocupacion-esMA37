@@ -51,6 +51,7 @@ export interface AppSettings {
   standardWeeklyCapacity: number;
   defaultView: 'Mensual' | 'Semanal';
   includeTentativeByDefault: boolean;
+  geminiApiKey?: string;
 }
 
 export interface AppState {
