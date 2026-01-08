@@ -82,17 +82,17 @@ export const getFTE = (hours: number, capacity: number) => {
 
 export const getOccupancyStatus = (totalHours: number, settings: AppSettings, isWeekly: boolean) => {
     const capacity = isWeekly ? settings.standardWeeklyCapacity : settings.standardMonthlyCapacity;
-    const benchThreshold = isWeekly ? settings.benchWeeklyThreshold : settings.benchMonthlyThreshold;
+    const availabilityThreshold = isWeekly ? settings.availableWeeklyThreshold : settings.availableMonthlyThreshold;
 
     if (totalHours > capacity) return 'Sobrecarga';
-    if (totalHours < benchThreshold) return 'Bench';
+    if (totalHours < availabilityThreshold) return 'Disponible';
     return 'OK';
 };
 
 export const getStatusBadgeClass = (status: string) => {
     switch (status) {
         case 'Sobrecarga': return 'badge-danger';
-        case 'Bench': return 'badge-warning';
+        case 'Disponible': return 'badge-warning';
         case 'OK': return 'badge-success';
         default: return 'badge-info';
     }
@@ -101,7 +101,7 @@ export const getStatusBadgeClass = (status: string) => {
 export const getStatusRowClass = (status: string) => {
     switch (status) {
         case 'Sobrecarga': return 'bg-risk';
-        case 'Bench': return 'bg-bench';
+        case 'Disponible': return 'bg-available';
         default: return '';
     }
 };
