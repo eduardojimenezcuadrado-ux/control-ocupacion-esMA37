@@ -12,7 +12,9 @@ import {
     Cloud,
     Download,
     Database,
-    Loader2
+    Loader2,
+    Key,
+    ExternalLink
 } from 'lucide-react';
 import { authenticateUser, fetchAllSharePointData, isAuthenticated, getCurrentUser } from '../services/sharepointService';
 import { getDefaultSharePointConfig } from '../services/sharepointConfig';
@@ -133,6 +135,61 @@ const SettingsScreen: React.FC = () => {
                             {isSyncing ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
                             {isSyncing ? 'Sincronizando...' : 'Actualizar desde SharePoint'}
                         </button>
+                    </div>
+
+                    {/* Gemini AI Integration Card */}
+                    <div className="card glass border-0 shadow-premium p-8">
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="p-3 bg-purple-500 rounded-2xl text-white shadow-lg shadow-purple-500/20">
+                                <Key size={24} />
+                            </div>
+                            <div>
+                                <h3 className="mb-0 text-xl font-extrabold tracking-tight">Integración Gemini AI</h3>
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mt-1">Motor de recomendaciones inteligentes</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">API Key de Google Gemini</label>
+                                <div className="relative">
+                                    <input
+                                        type="password"
+                                        placeholder="Introduce tu API Key de Gemini..."
+                                        className="w-full p-4 bg-gray-50 border-0 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-purple-500/5 transition-all font-medium outline-none pr-12"
+                                        value={formData.geminiApiKey || ''}
+                                        onChange={(e) => setFormData({ ...formData, geminiApiKey: e.target.value })}
+                                    />
+                                    <Key size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" />
+                                </div>
+                                <p className="text-[10px] text-gray-400 font-medium flex items-center gap-1.5 px-2">
+                                    <Info size={10} className="text-purple-400" />
+                                    Necesaria para activar el Copilot AI en el Dashboard.
+                                </p>
+                            </div>
+
+                            <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+                                <div className="flex items-center gap-3">
+                                    {formData.geminiApiKey ? (
+                                        <div className="flex items-center gap-2 text-green-600 font-bold text-sm">
+                                            <CheckCircle2 size={16} /> API Key configurada
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-gray-400 font-bold text-sm">
+                                            <Key size={16} /> Sin configurar
+                                        </div>
+                                    )}
+                                </div>
+                                <a
+                                    href="https://aistudio.google.com/app/apikey"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] font-black text-purple-500 uppercase tracking-widest flex items-center gap-1 hover:text-purple-600 transition-colors"
+                                >
+                                    Obtener API Key <ExternalLink size={10} />
+                                </a>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="card glass border-0 shadow-premium p-8">
