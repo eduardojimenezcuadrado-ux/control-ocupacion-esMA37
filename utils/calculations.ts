@@ -35,9 +35,15 @@ export const getPeriodOccupancy = (
     isWeekly: boolean,
     includeTentative: boolean
 ) => {
-    const filterFn = (a: { period: string }) => {
+    if (!consultantId || !periodId) {
+        return { confirmedHours: 0, tentativeHours: 0, absenceHours: 0, totalHours: 0 };
+    }
+
+    const filterFn = (a: { period: string; consultantId: string }) => {
+        if (a.consultantId !== consultantId) return false;
+
         if (!isWeekly) {
-            // Aggregation: If we are in Monthly view, sum up the month record + all its weeks
+            // Aggregation: Match '2026-01' and '2026-01-W1..5'
             return a.period === periodId || a.period.startsWith(`${periodId}-W`);
         } else {
             // Weekly: match exactly
@@ -45,26 +51,24 @@ export const getPeriodOccupancy = (
         }
     };
 
-    const periodAssignments = assignments.filter(
-        a => a.consultantId === consultantId &&
-            filterFn(a) &&
-            (includeTentative || a.status === 'Confirmada')
-    );
+    const periodAssignments = assignments.filter(filterFn);
+    const periodAbsences = absences.filter(filterFn);
 
-    const periodAbsences = absences.filter(
-        a => a.consultantId === consultantId &&
-            filterFn(a)
-    );
+    // To avoid double-counting in Monthly view:
+    // If we are in monthly view (isWeekly=false) and have records for both the Month (e.g. '2026-01') 
+    // AND specific weeks (e.g. '2026-01-W1') for the SAME project/category, we need to be careful.
+    // Standard approach: Sum them up as separate planning efforts unless we want to prioritize.
+    // For now, let's ensure we are only counting valid status.
 
     const confirmedHours = periodAssignments
         .filter(a => a.status === 'Confirmada')
-        .reduce((sum, a) => sum + a.hours, 0);
+        .reduce((sum, a) => sum + (a.hours || 0), 0);
 
     const tentativeHours = periodAssignments
         .filter(a => a.status === 'Tentativa')
-        .reduce((sum, a) => sum + a.hours, 0);
+        .reduce((sum, a) => sum + (a.hours || 0), 0);
 
-    const absenceHours = periodAbsences.reduce((sum, a) => sum + a.hours, 0);
+    const absenceHours = periodAbsences.reduce((sum, a) => sum + (a.hours || 0), 0);
 
     const totalHours = confirmedHours + (includeTentative ? tentativeHours : 0) + absenceHours;
 
