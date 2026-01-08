@@ -73,7 +73,7 @@ const Planning: React.FC = () => {
         setDate(newDate);
     };
 
-    const handleAddProject = async (consultantId: string, projectId: string) => {
+    const handleAddProject = (consultantId: string, projectId: string) => {
         const baseAssignment: Assignment = {
             id: crypto.randomUUID(),
             consultantId,
@@ -85,32 +85,33 @@ const Planning: React.FC = () => {
             description: ''
         };
 
-        if (isAuthenticated()) {
-            try {
-                const spId = await createAssignmentInSharePoint(baseAssignment, settings.sharePointSiteUrl);
-                addAssignment({ ...baseAssignment, sharePointId: spId });
-            } catch (error) {
-                alert('Error al sincronizar con SharePoint');
-            }
-        } else {
-            addAssignment(baseAssignment);
-        }
+        // Just add to local state, don't sync to SharePoint yet
+        addAssignment(baseAssignment);
         setShowProjectSelector(null);
         setProjectSearch('');
     };
 
-    const handleUpdateHours = async (assignment: Assignment, newHours: number) => {
-        const updated = { ...assignment, hours: newHours };
-        if (isAuthenticated() && assignment.sharePointId) {
-            try {
-                await updateAssignmentInSharePoint(updated, settings.sharePointSiteUrl);
-                updateAssignment(updated);
-            } catch (error) {
-                console.error('Failed to sync hours');
+    const handleSyncRow = async (projectId: string, consultantId: string) => {
+        const rowAssignments = assignments.filter(a => a.projectId === projectId && a.consultantId === consultantId && (a.period === monthId || weekIds.includes(a.period)));
+
+        try {
+            for (const a of rowAssignments) {
+                if (a.sharePointId) {
+                    await updateAssignmentInSharePoint(a, settings.sharePointSiteUrl);
+                } else if (a.hours > 0) {
+                    const spId = await createAssignmentInSharePoint(a, settings.sharePointSiteUrl);
+                    updateAssignment({ ...a, sharePointId: spId });
+                }
             }
-        } else {
-            updateAssignment(updated);
+            alert('✅ Fila sincronizada con SharePoint');
+        } catch (error) {
+            console.error('Error syncing row:', error);
+            alert('❌ Error al sincronizar con SharePoint');
         }
+    };
+
+    const handleUpdateHours = (assignment: Assignment, newHours: number) => {
+        updateAssignment({ ...assignment, hours: newHours });
     };
 
     const handleDeleteAssignment = async (assignment: Assignment) => {
@@ -368,24 +369,31 @@ const Planning: React.FC = () => {
                                                     })}
 
                                                     <td className="px-6 py-3 text-right">
-                                                        <div className="flex items-center justify-end gap-1 opacity-0 group-row:opacity-100 transition-opacity">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button
+                                                                onClick={() => handleSyncRow(pid, consultant.id)}
+                                                                className="p-2.5 bg-orange-500 text-white rounded-xl shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-4"
+                                                                title="Sincronizar esta fila con SharePoint"
+                                                            >
+                                                                <CheckCircle2 size={14} /> Añadir
+                                                            </button>
                                                             <button
                                                                 onClick={() => setSelectedAssignment(monthlyAsig || consultantAssignments.find(a => a.projectId === pid)!)}
-                                                                className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                                                                className="p-2.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-100"
                                                                 title="Detalles y Notas"
                                                             >
-                                                                <Maximize2 size={14} />
+                                                                <Maximize2 size={16} />
                                                             </button>
                                                             <button
                                                                 onClick={() => {
-                                                                    // Delete all related to this project for this consultant in this month
                                                                     if (window.confirm('¿Eliminar todas las asignaciones de este proyecto para el consultor en este mes?')) {
                                                                         consultantAssignments.filter(a => a.projectId === pid).forEach(a => handleDeleteAssignment(a));
                                                                     }
                                                                 }}
-                                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                                className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100"
+                                                                title="Eliminar Proyecto"
                                                             >
-                                                                <Trash2 size={14} />
+                                                                <Trash2 size={16} />
                                                             </button>
                                                         </div>
                                                     </td>
