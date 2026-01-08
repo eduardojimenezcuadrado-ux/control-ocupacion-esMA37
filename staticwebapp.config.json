@@ -2,23 +2,16 @@
     "navigationFallback": {
         "rewrite": "/index.html",
         "exclude": [
-            "/assets/*"
+            "/assets/*.{css,js,png,jpg,svg,ico}",
+            "/static/*.{json,xml}"
         ]
     },
     "globalHeaders": {
-        "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://login.microsoftonline.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://raonamadrid.sharepoint.com; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://generativelanguage.googleapis.com;"
+        "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://alcdn.msauth.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://generativelanguage.googleapis.com;"
     },
-    "routes": [
-        {
-            "route": "/assets/*",
-            "headers": {
-                "Cache-Control": "public, max-age=31536000, immutable"
-            }
-        }
-    ],
     "mimeTypes": {
-        ".json": "application/json",
         ".css": "text/css",
-        ".js": "application/javascript"
+        ".js": "application/javascript",
+        ".json": "application/json"
     }
 }
