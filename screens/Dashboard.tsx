@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppStore } from '../store';
 import {
     getPeriodOccupancy,
@@ -20,7 +20,12 @@ import {
     LineChart as LineChartIcon,
     Table as TableIcon,
     ArrowUpRight,
-    Activity
+    Activity,
+    Loader2,
+    RefreshCw,
+    Key,
+    Lightbulb,
+    Target
 } from 'lucide-react';
 import {
     LineChart,
@@ -32,10 +37,12 @@ import {
     ResponsiveContainer,
     Legend
 } from 'recharts';
+import { generateRecommendations, AIRecommendation } from '../services/geminiService';
 
 const Dashboard: React.FC = () => {
     const {
         consultants,
+        projects,
         assignments,
         absences,
         settings
@@ -47,6 +54,11 @@ const Dashboard: React.FC = () => {
     const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
     const [selectedForChart, setSelectedForChart] = useState<string[]>([]);
 
+    // AI Recommendations state
+    const [recommendations, setRecommendations] = useState<AIRecommendation[]>([]);
+    const [isLoadingAI, setIsLoadingAI] = useState(false);
+    const [aiError, setAiError] = useState<string | null>(null);
+
     const [filter, setFilter] = useState({
         onlyOverload: false,
         onlyBench: false,
@@ -55,6 +67,36 @@ const Dashboard: React.FC = () => {
     });
 
     const period = useMemo(() => formatPeriod(date, isWeekly), [date, isWeekly]);
+
+    // Fetch AI recommendations when period changes or on demand
+    const fetchRecommendations = useCallback(async () => {
+        if (!settings.geminiApiKey) {
+            setRecommendations([]);
+            return;
+        }
+
+        setIsLoadingAI(true);
+        setAiError(null);
+
+        try {
+            const appState = { consultants, projects, assignments, absences, settings };
+            const recs = await generateRecommendations(settings.geminiApiKey, appState, period, isWeekly);
+            setRecommendations(recs);
+        } catch (error: any) {
+            console.error('Error fetching AI recommendations:', error);
+            setAiError(error.message || 'Error al obtener recomendaciones');
+            setRecommendations([]);
+        } finally {
+            setIsLoadingAI(false);
+        }
+    }, [settings.geminiApiKey, consultants, projects, assignments, absences, settings, period, isWeekly]);
+
+    // Auto-fetch recommendations when API key is configured and period changes
+    useEffect(() => {
+        if (settings.geminiApiKey) {
+            fetchRecommendations();
+        }
+    }, [period, settings.geminiApiKey]);
 
     const changePeriod = (delta: number) => {
         const newDate = new Date(date);
@@ -148,7 +190,7 @@ const Dashboard: React.FC = () => {
                 const occ = getPeriodOccupancy(c.id, assignments, absences, pId, isWeekly, includeTentative);
                 teamTotal += occ.totalHours;
             });
-            data['Media Equipo'] = teamTotal / consultants.length;
+            data['Media Equipo'] = consultants.length > 0 ? teamTotal / consultants.length : 0;
 
             return data;
         });
@@ -388,58 +430,108 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 <div className="lg:col-span-4 space-y-8">
-                    {/* IA Recommendations Visual Polish */}
+                    {/* IA Recommendations - Dynamic */}
                     <div className="card relative overflow-hidden bg-[#252729] text-white border-0 shadow-2xl shadow-orange-500/10 group">
                         <div className="absolute -top-12 -right-12 p-8 opacity-5 group-hover:opacity-10 transition-opacity duration-700">
                             <Zap size={180} />
                         </div>
-                        <div className="relative z-10 space-y-8">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-orange-500 rounded-xl text-white shadow-lg shadow-orange-500/20">
-                                    <Zap size={24} fill="currentColor" />
+                        <div className="relative z-10 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-orange-500 rounded-xl text-white shadow-lg shadow-orange-500/20">
+                                        <Zap size={24} fill="currentColor" />
+                                    </div>
+                                    <div>
+                                        <h3 className="mb-0 text-white font-extrabold">Copilot AI</h3>
+                                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Motor de Optimización</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="mb-0 text-white font-extrabold">Copilot AI</h3>
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Motor de Optimización</p>
-                                </div>
+                                {settings.geminiApiKey && (
+                                    <button
+                                        onClick={fetchRecommendations}
+                                        disabled={isLoadingAI}
+                                        className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all disabled:opacity-50"
+                                        title="Actualizar recomendaciones"
+                                    >
+                                        <RefreshCw size={16} className={isLoadingAI ? 'animate-spin' : ''} />
+                                    </button>
+                                )}
                             </div>
 
-                            <div className="space-y-4">
-                                <div className="p-5 bg-white/5 rounded-2xl border border-white/5 space-y-3 hover:bg-white/10 transition-all cursor-pointer group/item">
-                                    <div className="flex items-start justify-between">
-                                        <p className="text-sm font-bold leading-snug pr-4">Liberar 15h de 'Proyecto X' en Marzo</p>
-                                        <div className="w-2 h-2 rounded-full bg-orange-500" />
+                            {/* No API Key State */}
+                            {!settings.geminiApiKey && (
+                                <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center space-y-4">
+                                    <div className="w-12 h-12 mx-auto bg-gray-700 rounded-xl flex items-center justify-center">
+                                        <Key size={24} className="text-gray-500" />
                                     </div>
-                                    <div className="text-[11px] font-medium text-gray-400 flex items-center gap-2">
-                                        <TrendingUp size={12} className="text-green-500" /> Impacto: Mejora Bench en un 12%
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-300">Módulo inoperativo</p>
+                                        <p className="text-[11px] text-gray-500 mt-1">
+                                            Introduce tu API Key de Gemini en Ajustes para activar las recomendaciones inteligentes.
+                                        </p>
                                     </div>
-                                    <button className="text-[10px] font-black uppercase tracking-widest text-[#f78c38] group-hover/item:text-orange-300 transition-colors flex items-center gap-1">
-                                        Aplicar Cambio <ChevronRight size={10} />
-                                    </button>
                                 </div>
-                                <div className="p-5 bg-white/5 rounded-2xl border border-white/5 space-y-3 hover:bg-white/10 transition-all cursor-pointer group/item">
-                                    <div className="flex items-start justify-between">
-                                        <p className="text-sm font-bold leading-snug pr-4">Elena Sánchez finaliza preventa pronto</p>
-                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                    </div>
-                                    <div className="text-[11px] font-medium text-gray-400 flex items-center gap-2">
-                                        <Clock size={12} className="text-blue-400" /> Disponibilidad: Semana 4 Enero
-                                    </div>
-                                    <button className="text-[10px] font-black uppercase tracking-widest text-[#f78c38] group-hover/item:text-orange-300 transition-colors flex items-center gap-1">
-                                        Ver Asignaciones <ChevronRight size={10} />
-                                    </button>
-                                </div>
-                            </div>
+                            )}
 
-                            <div className="pt-6 border-t border-white/10 flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Engine v2.4 Active</span>
-                                <div className="flex -space-x-3 hover:space-x-1 transition-all">
-                                    {[1, 2, 3].map(i => (
-                                        <div key={i} className="w-8 h-8 rounded-full border-2 border-[#252729] bg-gray-800 flex items-center justify-center text-[10px] font-bold shadow-lg">
-                                            AI
+                            {/* Loading State */}
+                            {settings.geminiApiKey && isLoadingAI && (
+                                <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center space-y-3">
+                                    <Loader2 size={32} className="animate-spin mx-auto text-orange-500" />
+                                    <p className="text-sm font-medium text-gray-400">Analizando datos de ocupación...</p>
+                                </div>
+                            )}
+
+                            {/* Error State */}
+                            {settings.geminiApiKey && !isLoadingAI && aiError && (
+                                <div className="p-4 bg-red-500/10 rounded-2xl border border-red-500/20 text-center space-y-2">
+                                    <AlertTriangle size={24} className="mx-auto text-red-400" />
+                                    <p className="text-xs font-medium text-red-300">{aiError}</p>
+                                    <button
+                                        onClick={fetchRecommendations}
+                                        className="text-[10px] font-black uppercase tracking-widest text-orange-400 hover:text-orange-300"
+                                    >
+                                        Reintentar
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Recommendations List */}
+                            {settings.geminiApiKey && !isLoadingAI && !aiError && recommendations.length > 0 && (
+                                <div className="space-y-3">
+                                    {recommendations.map((rec, index) => (
+                                        <div key={rec.id || index} className="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-2 hover:bg-white/10 transition-all group/item">
+                                            <div className="flex items-start justify-between">
+                                                <p className="text-sm font-bold leading-snug pr-4">{rec.title}</p>
+                                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${rec.type === 'alert' ? 'bg-red-500' :
+                                                        rec.type === 'opportunity' ? 'bg-blue-500' : 'bg-orange-500'
+                                                    }`} />
+                                            </div>
+                                            <p className="text-[11px] font-medium text-gray-400">{rec.description}</p>
+                                            <div className="text-[11px] font-medium text-gray-500 flex items-center gap-2">
+                                                {rec.type === 'alert' ? <AlertTriangle size={12} className="text-red-400" /> :
+                                                    rec.type === 'opportunity' ? <Lightbulb size={12} className="text-blue-400" /> :
+                                                        <Target size={12} className="text-green-400" />}
+                                                {rec.impact}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
+                            )}
+
+                            {/* Empty State (API configured but no recommendations) */}
+                            {settings.geminiApiKey && !isLoadingAI && !aiError && recommendations.length === 0 && (
+                                <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center space-y-3">
+                                    <CheckCircle2 size={32} className="mx-auto text-green-500" />
+                                    <p className="text-sm font-medium text-gray-300">Sin recomendaciones pendientes</p>
+                                    <p className="text-[11px] text-gray-500">La ocupación del equipo está optimizada.</p>
+                                </div>
+                            )}
+
+                            <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                                    {settings.geminiApiKey ? 'Gemini AI Activo' : 'Sin configurar'}
+                                </span>
+                                <div className={`w-2 h-2 rounded-full ${settings.geminiApiKey ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`} />
                             </div>
                         </div>
                     </div>
