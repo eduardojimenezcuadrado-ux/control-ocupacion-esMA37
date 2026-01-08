@@ -14,7 +14,9 @@ import {
     Star,
     Info,
     LayoutList,
-    UserCheck
+    UserCheck,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { Absence, AbsenceCategory, AppSettings } from '../types';
 import { formatPeriod } from '../utils/calculations';
@@ -32,6 +34,16 @@ const Absences: React.FC = () => {
 
     const periodData = useMemo(() => formatPeriod(date, isWeekly), [date, isWeekly]);
     const periodId = periodData.id;
+
+    const changePeriod = (delta: number) => {
+        const newDate = new Date(date);
+        if (isWeekly) {
+            newDate.setDate(newDate.getDate() + (delta * 7));
+        } else {
+            newDate.setMonth(newDate.getMonth() + delta);
+        }
+        setDate(newDate);
+    };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -108,13 +120,38 @@ const Absences: React.FC = () => {
 
     return (
         <div className="space-y-8 pb-12">
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#f78c38] uppercase tracking-widest">
                         <Calendar size={14} /> Time-off Tracking
                     </div>
-                    <h1>Control de Ausencias</h1>
+                    <h1 className="mb-0">Control de Ausencias</h1>
                     <p className="text-gray-500 font-medium">Gestión de periodos de indisponibilidad y ajustes de carga</p>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <div className="flex bg-gray-100/50 p-1 rounded-2xl border border-gray-200">
+                        <button
+                            onClick={() => setIsWeekly(false)}
+                            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${!isWeekly ? 'bg-[#252729] text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}
+                        >
+                            Mensual
+                        </button>
+                        <button
+                            onClick={() => setIsWeekly(true)}
+                            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${isWeekly ? 'bg-[#252729] text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}
+                        >
+                            Semanal
+                        </button>
+                    </div>
+
+                    <div className="flex items-center bg-white p-1 rounded-2xl border border-gray-100 shadow-sm">
+                        <button onClick={() => changePeriod(-1)} className="p-2 hover:bg-gray-50 rounded-xl text-gray-400 transition-all"><ChevronLeft size={20} /></button>
+                        <div className="px-6 font-black text-xs text-gray-800 uppercase tracking-tighter min-w-[160px] text-center">
+                            {periodData.label}
+                        </div>
+                        <button onClick={() => changePeriod(1)} className="p-2 hover:bg-gray-50 rounded-xl text-gray-400 transition-all"><ChevronRight size={20} /></button>
+                    </div>
                 </div>
             </header>
 
@@ -221,7 +258,7 @@ const Absences: React.FC = () => {
                         <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <LayoutList size={18} className="text-gray-400" />
-                                <h3 className="mb-0 text-lg">Histórico Mensual ({periodId})</h3>
+                                <h3 className="mb-0 text-lg">Histórico ({periodData.label})</h3>
                             </div>
                             <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Auditoría Interna</span>
                         </div>
