@@ -294,7 +294,7 @@ const Absences: React.FC = () => {
                             </div>
 
                             <p className="text-gray-400 text-lg leading-relaxed max-w-2xl font-medium">
-                                Los registros de ausencia impactan directamente en el cálculo de la capacidad neta. Una ausencia de <span className="text-white font-black underline decoration-orange-500 decoration-4 underline-offset-4">160h mensuales</span> equivale a una indisponibilidad absoluta para ese periodo.
+                                Los registros de ausencia impactan directamente en el cálculo de la capacidad neta. Una ausencia de <span className="text-[#f78c38] font-black underline decoration-orange-500/30 decoration-4 underline-offset-8">160h mensuales</span> equivale a una indisponibilidad absoluta para ese periodo.
                             </p>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">

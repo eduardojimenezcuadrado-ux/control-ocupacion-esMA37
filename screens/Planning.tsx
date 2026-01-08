@@ -270,7 +270,14 @@ const Planning: React.FC = () => {
                                     <div className="flex items-center gap-6">
                                         <div className="space-y-1">
                                             <div className="text-[9px] text-gray-300 font-bold uppercase tracking-widest leading-none">Carga Total</div>
-                                            <div className="text-sm font-black text-gray-700 leading-none">{occ.totalHours}h <span className="text-[10px] text-gray-300">/ {capacity}h</span></div>
+                                            <div className="text-sm font-black text-gray-700 leading-none">
+                                                {occ.totalHours}h <span className="text-[10px] text-gray-300">/ {capacity}h</span>
+                                                {occ.absenceHours > 0 && (
+                                                    <span className="ml-2 text-[9px] text-[#f78c38] font-black italic tracking-tighter" title={`${occ.absenceHours}h de ausencias registradas`}>
+                                                        (Inc. {occ.absenceHours}h ausencias)
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                                             <div

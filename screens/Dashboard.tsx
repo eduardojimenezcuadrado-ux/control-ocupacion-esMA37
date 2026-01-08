@@ -217,11 +217,45 @@ const Dashboard: React.FC = () => {
 
             {/* Premium KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                <KPICard label="Ocupación Global" value={`${stats.occupancyPct}%`} icon={TrendingUp} variant="orange" subtext={`${stats.totalHours}h confirmadas`} />
-                <KPICard label="Capacidad FTE" value={stats.totalFTE.toFixed(1)} icon={Users} variant="dark" />
-                <KPICard label="Consultores Disponibles" value={stats.availableCount} icon={CheckCircle2} variant="white" color="text-green-500" />
-                <KPICard label="Puntos de Riesgo" value={stats.overloadCount} icon={AlertTriangle} variant="white" color="text-red-500" />
-                <KPICard label="Carga Tentativa" value={`${stats.totalTentative}h`} icon={Zap} variant="white" color="text-blue-500" />
+                <KPICard
+                    label="Ocupación Global"
+                    value={`${stats.occupancyPct}%`}
+                    icon={TrendingUp}
+                    variant="orange"
+                    subtext={`${stats.totalHours}h confirmadas`}
+                    tooltip="Suma de horas confirmadas + ausencias frente a la capacidad total del equipo activo."
+                />
+                <KPICard
+                    label="Capacidad FTE"
+                    value={stats.totalFTE.toFixed(1)}
+                    icon={Users}
+                    variant="dark"
+                    tooltip="Full-Time Equivalent: Horas totales divididas por la capacidad estándar (160h/mes o 40h/sem)."
+                />
+                <KPICard
+                    label="Consultores Disponibles"
+                    value={stats.availableCount}
+                    icon={CheckCircle2}
+                    variant="white"
+                    color="text-green-500"
+                    tooltip="Número de consultores con carga inferior al umbral de disponibilidad configurado."
+                />
+                <KPICard
+                    label="Puntos de Riesgo"
+                    value={stats.overloadCount}
+                    icon={AlertTriangle}
+                    variant="white"
+                    color="text-red-500"
+                    tooltip="Número de consultores que superan el 100% de su capacidad para este periodo."
+                />
+                <KPICard
+                    label="Carga Tentativa"
+                    value={`${stats.totalTentative}h`}
+                    icon={Zap}
+                    variant="white"
+                    color="text-blue-500"
+                    tooltip="Total de horas en proyectos con estado 'Tentativo' (no confirmados aún)."
+                />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -573,24 +607,31 @@ interface KPICardProps {
     variant: 'orange' | 'dark' | 'white';
     subtext?: string;
     color?: string;
+    tooltip?: string;
 }
 
-const KPICard = ({ label, value, icon: Icon, variant, subtext, color }: KPICardProps) => {
+const KPICard = ({ label, value, icon: Icon, variant, subtext, color, tooltip }: KPICardProps) => {
     const variants = {
         orange: "card-orange shadow-xl shadow-orange-500/20",
         dark: "card-dark shadow-xl shadow-black/20",
-        white: "bg-white text-gray-900",
+        white: "bg-white text-gray-900 border-gray-100",
     };
 
     return (
-        <div className={`card p-10 flex flex-col justify-between group transition-all duration-500 hover:scale-[1.02] ${variants[variant]}`}>
+        <div
+            className={`card p-10 flex flex-col justify-between group transition-all duration-500 hover:scale-[1.02] ${variants[variant]}`}
+            title={tooltip}
+        >
             <div className="flex items-center justify-between mb-6 opacity-80 group-hover:opacity-100 transition-all">
-                <span className={`text-xs font-black uppercase tracking-widest ${variant === 'white' ? 'text-gray-400' : 'text-white/70'}`}>{label}</span>
+                <div className="flex flex-col">
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${variant === 'white' ? 'text-gray-400' : 'text-white/70'}`}>{label}</span>
+                    {tooltip && <div className="h-0.5 w-4 bg-current opacity-20 mt-1" />}
+                </div>
                 <Icon size={24} className={color || (variant === 'white' ? 'text-gray-400' : 'text-white/80')} />
             </div>
             <div className="space-y-1">
                 <div className={`text-5xl font-black tracking-tighter ${variant === 'white' ? 'text-gray-900' : 'text-white'}`}>{value}</div>
-                {subtext && <div className={`text-xs font-bold uppercase tracking-wide mt-2 ${variant === 'white' ? 'text-gray-500' : 'text-white/60'}`}>{subtext}</div>}
+                {subtext && <div className={`text-[10px] font-black uppercase tracking-wide mt-2 ${variant === 'white' ? 'text-gray-500' : 'text-white/60'}`}>{subtext}</div>}
             </div>
         </div>
     );
