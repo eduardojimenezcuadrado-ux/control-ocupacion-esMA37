@@ -7,6 +7,7 @@ export const initialSettings: AppSettings = {
     standardWeeklyCapacity: 40,
     defaultView: 'Mensual',
     includeTentativeByDefault: true,
+    geminiApiKey: '',
 };
 
 export const consultants: Consultant[] = [
