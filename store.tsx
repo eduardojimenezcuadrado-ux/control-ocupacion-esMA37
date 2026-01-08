@@ -18,7 +18,7 @@ interface AppContextType extends AppState {
     removeAbsence: (id: string) => void;
     resetPeriod: (period: string, isWeekly: boolean) => void;
     copyPeriod: (fromPeriod: string, toPeriod: string, isWeekly: boolean) => void;
-    loadSharePointData: (data: { consultants: Consultant[]; projects: Project[]; assignments: Assignment[] }) => void;
+    loadSharePointData: (data: { consultants: Consultant[]; projects: Project[]; assignments: Assignment[]; absences: Absence[] }) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -29,12 +29,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return saved ? JSON.parse(saved) : initialAppState;
     });
 
-    const loadSharePointData = useCallback((data: { consultants: Consultant[]; projects: Project[]; assignments: Assignment[] }) => {
+    const loadSharePointData = useCallback((data: { consultants: Consultant[]; projects: Project[]; assignments: Assignment[]; absences: Absence[] }) => {
         setState(prev => ({
             ...prev,
             consultants: data.consultants,
             projects: data.projects,
             assignments: data.assignments,
+            absences: data.absences,
         }));
     }, []);
 
