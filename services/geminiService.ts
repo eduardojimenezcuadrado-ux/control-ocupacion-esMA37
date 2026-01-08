@@ -94,7 +94,8 @@ function prepareDataSummary(
   // Build summary
   const consultantSummary = Object.entries(consultantHours).map(([id, data]) => {
     const total = data.confirmed + data.tentative + data.absence;
-    const status = total > capacity ? 'SOBRECARGA' : total < state.settings.benchMonthlyThreshold ? 'BENCH' : 'OK';
+    const availabilityThreshold = isWeekly ? state.settings.availableWeeklyThreshold : state.settings.availableMonthlyThreshold;
+    const status = total > capacity ? 'SOBRECARGA' : total < availabilityThreshold ? 'DISPONIBLE' : 'OK';
     return `- ${data.name} (${data.role}): ${data.confirmed}h confirmadas, ${data.tentative}h tentativas, ${data.absence}h ausencias. Total: ${total}h. Estado: ${status}`;
   }).join('\n');
 
@@ -106,7 +107,7 @@ function prepareDataSummary(
   return `
 PERIODO: ${periodId} (${isWeekly ? 'Semanal' : 'Mensual'})
 CAPACIDAD ESTÁNDAR: ${capacity}h
-UMBRAL BENCH: ${isWeekly ? state.settings.benchWeeklyThreshold : state.settings.benchMonthlyThreshold}h
+UMB_DISPONIBILIDAD: ${isWeekly ? state.settings.availableWeeklyThreshold : state.settings.availableMonthlyThreshold}h
 
 CONSULTORES Y OCUPACIÓN:
 ${consultantSummary}
