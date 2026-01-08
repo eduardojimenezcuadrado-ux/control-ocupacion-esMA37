@@ -29,7 +29,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return saved ? JSON.parse(saved) : initialAppState;
     });
 
+    const loadSharePointData = useCallback((data: { consultants: Consultant[]; projects: Project[]; assignments: Assignment[] }) => {
+        setState(prev => ({
+            ...prev,
+            consultants: data.consultants,
+            projects: data.projects,
+            assignments: data.assignments,
+        }));
+    }, []);
+
+    const initializationRef = React.useRef(false);
     useEffect(() => {
+        if (initializationRef.current) return;
+        initializationRef.current = true;
+
         const initSharePoint = async () => {
             const config = getDefaultSharePointConfig();
             if (!config.clientId || !config.tenantId) {
@@ -47,12 +60,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (account) {
                     console.log('✅ SharePoint Authenticated silently:', account.username);
                     // 3. Auto-sync data if authenticated
-                    const data = await fetchAllSharePointData(config.siteUrl);
+                    const data = await fetchAllSharePointData(state.settings.sharePointSiteUrl || config.siteUrl);
                     loadSharePointData(data);
                     console.log('✅ SharePoint Data auto-synced on load');
                 } else {
                     console.log('ℹ️ SharePoint: No active session found. Redirecting to login...');
-                    await login();
+                    // Add a small delay to avoid redirect loops during development/refresh
+                    setTimeout(async () => {
+                        try {
+                            await login();
+                        } catch (e) {
+                            console.error('Redirect login failed:', e);
+                        }
+                    }, 1000);
                 }
             } catch (error) {
                 console.error('❌ SharePoint Auto-sync error:', error);
@@ -60,7 +80,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
 
         initSharePoint();
-    }, []);
+    }, [loadSharePointData]);
 
     useEffect(() => {
         localStorage.setItem('control_ocupacion_state', JSON.stringify(state));
@@ -155,14 +175,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
     };
 
-    const loadSharePointData = useCallback((data: { consultants: Consultant[]; projects: Project[]; assignments: Assignment[] }) => {
-        setState(prev => ({
-            ...prev,
-            consultants: data.consultants,
-            projects: data.projects,
-            assignments: data.assignments,
-        }));
-    }, []);
+
 
     const value: AppContextType = {
         ...state,

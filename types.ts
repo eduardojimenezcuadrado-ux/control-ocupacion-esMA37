@@ -52,6 +52,7 @@ export interface AppSettings {
   defaultView: 'Mensual' | 'Semanal';
   includeTentativeByDefault: boolean;
   geminiApiKey?: string;
+  sharePointSiteUrl?: string;
 }
 
 export interface AppState {
