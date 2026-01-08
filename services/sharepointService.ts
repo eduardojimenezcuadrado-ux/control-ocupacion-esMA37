@@ -139,33 +139,54 @@ const getAccessToken = async (writeAccess = false): Promise<string> => {
 };
 
 /**
- * Get SharePoint Site ID (cached)
+ * Get SharePoint Site ID (cached by URL)
  */
+let lastRequestedUrl: string | null = null;
 const getSiteId = async (siteUrl: string): Promise<string> => {
+    // Basic validation and protocol addition
+    let normalizedUrl = siteUrl.trim();
+    if (normalizedUrl && !normalizedUrl.startsWith('http')) {
+        normalizedUrl = `https://${normalizedUrl}`;
+    }
+
+    // If URL changed, clear cache to force re-fetch from new site
+    if (lastRequestedUrl && lastRequestedUrl !== normalizedUrl) {
+        console.log('🔄 SharePoint URL changed, clearing site cache...');
+        cachedSiteId = null;
+    }
+    lastRequestedUrl = normalizedUrl;
+
     if (cachedSiteId) return cachedSiteId;
 
     const accessToken = await getAccessToken();
-    const url = new URL(siteUrl);
+    const url = new URL(normalizedUrl);
     const hostname = url.hostname;
-    let sitePath = url.pathname || '';
 
-    // Remove trailing slash if present
+    // Improved path extraction: only take the base site path (e.g. /sites/Marketing)
+    // and ignore anything after /Lists/, /Forms/ or /Shared Documents/
+    let sitePath = url.pathname || '';
+    const cleanPathMatch = sitePath.match(/^(.*?)(\/(Lists|Forms|Shared Documents|ListsExternal)\/|$)/i);
+    if (cleanPathMatch) {
+        sitePath = cleanPathMatch[1];
+    }
+
+    // Remove trailing slash
     if (sitePath.endsWith('/')) {
         sitePath = sitePath.slice(0, -1);
     }
 
-    // For Graph API, we need the format: sites/{hostname}:/{path}:
-    // For root site (no path), we use: sites/{hostname}:/
+    // Format the Graph API URL for site lookup
     let siteApiUrl: string;
     if (!sitePath || sitePath === '' || sitePath === '/') {
-        // Root site - use colon notation with just hostname
+        // Tenant root
         siteApiUrl = `https://graph.microsoft.com/v1.0/sites/${hostname}:/`;
     } else {
-        // Subsite - use full path with colon
+        // Sub-site
         siteApiUrl = `https://graph.microsoft.com/v1.0/sites/${hostname}:${sitePath}`;
     }
 
-    console.log('Fetching site from:', siteApiUrl);
+    console.log('🔍 Resolving SharePoint Site ID for:', sitePath || '(root)');
+    console.log('📡 Graph API Call:', siteApiUrl);
 
     const response = await fetch(siteApiUrl, {
         headers: {
@@ -176,12 +197,17 @@ const getSiteId = async (siteUrl: string): Promise<string> => {
 
     if (!response.ok) {
         const errorText = await response.text();
-        console.error('Site fetch error:', response.status, errorText);
-        throw new Error(`Failed to get site: ${response.status} - ${response.statusText}. Check that you have Sites.Read.All permission and the site URL is correct.`);
+        console.error('❌ Site fetch error:', response.status, errorText);
+
+        if (response.status === 403) {
+            throw new Error(`Acceso Denegado (403). Verifica que tienes permisos en el sitio "${siteUrl}" y que la URL es correcta.`);
+        }
+
+        throw new Error(`Error ${response.status}: ${response.statusText}. Verifica la URL del sitio.`);
     }
 
     const siteData = await response.json();
-    console.log('Site ID obtained:', siteData.id);
+    console.log('✅ Site ID obtained:', siteData.id);
     cachedSiteId = siteData.id;
     return cachedSiteId!;
 };
@@ -228,14 +254,16 @@ export const fetchSharePointListData = async (
         });
 
         if (!itemsResponse.ok) {
-            throw new Error(`Failed to get list items: ${itemsResponse.statusText}`);
+            const errorBody = await itemsResponse.json().catch(() => ({}));
+            const message = errorBody.error?.message || itemsResponse.statusText;
+            throw new Error(`Error obteniendo elementos de "${listName}": ${message}`);
         }
 
         const itemsData = await itemsResponse.json();
         return itemsData.value.map((item: any) => ({ ...item.fields, _itemId: item.id }));
     } catch (error: any) {
-        console.error('SharePoint data fetch error:', error);
-        throw new Error(`Error fetching SharePoint data: ${error.message}`);
+        console.error(`❌ SharePoint [${listName}] fetch error:`, error);
+        throw error;
     }
 };
 
@@ -401,9 +429,35 @@ const deleteListItem = async (siteId: string, listId: string, itemId: string): P
 };
 
 /**
+ * Update an item in a SharePoint list
+ */
+const updateListItem = async (siteId: string, listId: string, itemId: string, fields: Record<string, any>): Promise<any> => {
+    const accessToken = await getAccessToken(true);
+
+    const apiUrl = `https://graph.microsoft.com/v1.0/sites/${siteId}/lists/${listId}/items/${itemId}/fields`;
+
+    const response = await fetch(apiUrl, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(fields),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Update item error:', response.status, errorText);
+        throw new Error(`Failed to update item: ${response.status} - ${response.statusText}`);
+    }
+
+    return await response.json();
+};
+
+/**
  * Create a consultant in SP_Consultores
  */
-export const createConsultantInSharePoint = async (consultant: Consultant, siteUrl?: string): Promise<void> => {
+export const createConsultantInSharePoint = async (consultant: Consultant, siteUrl?: string): Promise<string> => {
     const config = getDefaultSharePointConfig();
     const url = siteUrl || config.siteUrl;
 
@@ -418,14 +472,15 @@ export const createConsultantInSharePoint = async (consultant: Consultant, siteU
         IsActive: consultant.active,
     };
 
-    await createListItem(siteId, listId, fields);
+    const result = await createListItem(siteId, listId, fields);
     console.log('Consultant created in SharePoint:', consultant.name);
+    return result.id;
 };
 
 /**
  * Create a project in SP_Proyectos
  */
-export const createProjectInSharePoint = async (project: Project, siteUrl?: string): Promise<void> => {
+export const createProjectInSharePoint = async (project: Project, siteUrl?: string): Promise<string> => {
     const config = getDefaultSharePointConfig();
     const url = siteUrl || config.siteUrl;
 
@@ -440,14 +495,15 @@ export const createProjectInSharePoint = async (project: Project, siteUrl?: stri
         IsActive: project.active,
     };
 
-    await createListItem(siteId, listId, fields);
+    const result = await createListItem(siteId, listId, fields);
     console.log('Project created in SharePoint:', project.name);
+    return result.id;
 };
 
 /**
  * Create an assignment in SP_Asignaciones
  */
-export const createAssignmentInSharePoint = async (assignment: Assignment, siteUrl?: string): Promise<void> => {
+export const createAssignmentInSharePoint = async (assignment: Assignment, siteUrl?: string): Promise<string> => {
     const config = getDefaultSharePointConfig();
     const url = siteUrl || config.siteUrl;
 
@@ -464,8 +520,83 @@ export const createAssignmentInSharePoint = async (assignment: Assignment, siteU
         Description: assignment.description || '',
     };
 
-    await createListItem(siteId, listId, fields);
+    const result = await createListItem(siteId, listId, fields);
     console.log('Assignment created in SharePoint:', assignment.id);
+    return result.id;
+};
+
+/**
+ * Update a consultant in SP_Consultores
+ */
+export const updateConsultantInSharePoint = async (consultant: Consultant, siteUrl?: string): Promise<void> => {
+    if (!consultant.sharePointId) return;
+
+    const config = getDefaultSharePointConfig();
+    const url = siteUrl || config.siteUrl;
+
+    const siteId = await getSiteId(url);
+    const listId = await getListId(siteId, SP_LISTS.CONSULTORES);
+
+    const fields = {
+        Title: consultant.email || consultant.id,
+        ConsultantName: consultant.name,
+        Email: consultant.email,
+        Role: consultant.role,
+        IsActive: consultant.active,
+    };
+
+    await updateListItem(siteId, listId, consultant.sharePointId, fields);
+    console.log('Consultant updated in SharePoint:', consultant.name);
+};
+
+/**
+ * Update a project in SP_Proyectos
+ */
+export const updateProjectInSharePoint = async (project: Project, siteUrl?: string): Promise<void> => {
+    if (!project.sharePointId) return;
+
+    const config = getDefaultSharePointConfig();
+    const url = siteUrl || config.siteUrl;
+
+    const siteId = await getSiteId(url);
+    const listId = await getListId(siteId, SP_LISTS.PROYECTOS);
+
+    const fields = {
+        Title: project.name,
+        ProjectID: project.id,
+        ClientName: project.client || '',
+        ProjectType: project.type,
+        IsActive: project.active,
+    };
+
+    await updateListItem(siteId, listId, project.sharePointId, fields);
+    console.log('Project updated in SharePoint:', project.name);
+};
+
+/**
+ * Update an assignment in SP_Asignaciones
+ */
+export const updateAssignmentInSharePoint = async (assignment: Assignment, siteUrl?: string): Promise<void> => {
+    if (!assignment.sharePointId) return;
+
+    const config = getDefaultSharePointConfig();
+    const url = siteUrl || config.siteUrl;
+
+    const siteId = await getSiteId(url);
+    const listId = await getListId(siteId, SP_LISTS.ASIGNACIONES);
+
+    const fields = {
+        Title: assignment.id,
+        ConsultantLookup: assignment.consultantId,
+        ProjectLookup: assignment.projectId,
+        Period: assignment.period,
+        Hours: assignment.hours,
+        Status: assignment.status,
+        Description: assignment.description || '',
+    };
+
+    await updateListItem(siteId, listId, assignment.sharePointId, fields);
+    console.log('Assignment updated in SharePoint:', assignment.id);
 };
 
 /**
