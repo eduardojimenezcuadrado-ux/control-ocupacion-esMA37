@@ -64,8 +64,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onScreenChange }) => {
                         <BarChart3 className="text-white" size={24} />
                     </div>
                     <div>
-                        <span className="text-2xl font-black tracking-tighter text-white block">OCUPACIÓN</span>
-                        <span className="text-[11px] uppercase tracking-[0.25em] font-black text-gray-500">Resource Manager</span>
+                        <span className="text-2xl font-black tracking-tighter text-white block">ESMA37</span>
+                        <span className="text-[11px] uppercase tracking-[0.25em] font-black text-gray-500">Control de Ocupación</span>
                     </div>
                 </div>
 
@@ -92,10 +92,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onScreenChange }) => {
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                             </span>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">System Live</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Sistema Activo</span>
                         </div>
                         <p className="text-[10px] text-gray-500 leading-relaxed font-medium">
-                            Real-time occupancy tracking enabled for Q1-2026.
+                            Seguimiento de ocupación en tiempo real para Q1-2026.
                         </p>
                     </div>
 
