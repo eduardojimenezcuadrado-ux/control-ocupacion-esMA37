@@ -70,7 +70,7 @@ const Planning: React.FC = () => {
         // Sync to SharePoint if authenticated
         if (isAuthenticated()) {
             try {
-                await createAssignmentInSharePoint(newAssignment);
+                await createAssignmentInSharePoint(newAssignment, settings.sharePointSiteUrl);
                 console.log('✅ Assignment synced to SharePoint');
             } catch (error) {
                 console.error('⚠️ Failed to sync to SharePoint:', error);
@@ -89,7 +89,7 @@ const Planning: React.FC = () => {
         // Delete from SharePoint if authenticated and has sharePointId
         if (isAuthenticated() && assignment.sharePointId) {
             try {
-                await deleteAssignmentInSharePoint(assignment.id, assignment.sharePointId);
+                await deleteAssignmentInSharePoint(assignment.id, assignment.sharePointId, settings.sharePointSiteUrl);
                 console.log('✅ Assignment deleted from SharePoint');
             } catch (error) {
                 console.error('⚠️ Failed to delete from SharePoint:', error);

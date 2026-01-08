@@ -25,7 +25,7 @@ import { formatPeriod } from '../utils/calculations';
 import { createProjectInSharePoint, deleteProjectInSharePoint, isAuthenticated } from '../services/sharepointService';
 
 const Projects: React.FC = () => {
-    const { projects, setProjects, assignments, consultants } = useAppStore();
+    const { projects, setProjects, assignments, consultants, settings } = useAppStore();
     const [searchTerm, setSearchTerm] = useState('');
     const [typeFilter, setTypeFilter] = useState<'Todos' | ProjectType>('Todos');
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -54,7 +54,7 @@ const Projects: React.FC = () => {
 
         if (isAuthenticated() && project.sharePointId) {
             try {
-                await deleteProjectInSharePoint(project.id, project.sharePointId);
+                await deleteProjectInSharePoint(project.id, project.sharePointId, settings.sharePointSiteUrl);
                 console.log('✅ Project deleted from SharePoint');
             } catch (error) {
                 console.error('⚠️ Failed to delete project from SharePoint', error);
@@ -86,7 +86,7 @@ const Projects: React.FC = () => {
             // Sync to SharePoint if authenticated
             if (isAuthenticated()) {
                 try {
-                    await createProjectInSharePoint(projectData);
+                    await createProjectInSharePoint(projectData, settings.sharePointSiteUrl);
                     console.log('✅ Project synced to SharePoint');
                 } catch (error) {
                     console.error('⚠️ Failed to sync to SharePoint:', error);

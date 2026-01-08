@@ -83,7 +83,7 @@ const Consultants: React.FC = () => {
         // Delete from SharePoint if authenticated and has sharePointId
         if (isAuthenticated() && consultant.sharePointId) {
             try {
-                await deleteConsultantInSharePoint(consultant.id, consultant.sharePointId);
+                await deleteConsultantInSharePoint(consultant.id, consultant.sharePointId, settings.sharePointSiteUrl);
                 console.log('✅ Consultant deleted from SharePoint');
             } catch (error) {
                 console.error('⚠️ Failed to delete from SharePoint:', error);
@@ -109,7 +109,7 @@ const Consultants: React.FC = () => {
                 // Sync to SharePoint if authenticated
                 if (isAuthenticated()) {
                     try {
-                        await createConsultantInSharePoint(consultantData);
+                        await createConsultantInSharePoint(consultantData, settings.sharePointSiteUrl);
                         console.log('✅ Consultant synced to SharePoint');
                     } catch (error) {
                         console.error('⚠️ Failed to sync to SharePoint:', error);

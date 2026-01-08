@@ -45,7 +45,7 @@ const SettingsScreen: React.FC = () => {
                 await authenticateUser();
             }
 
-            const data = await fetchAllSharePointData(config.siteUrl);
+            const data = await fetchAllSharePointData(formData.sharePointSiteUrl || config.siteUrl);
             loadSharePointData(data);
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 3000);
@@ -97,6 +97,24 @@ const SettingsScreen: React.FC = () => {
                         </div>
 
                         <div className="bg-gray-50/50 rounded-2xl p-6 mb-6">
+                            <div className="space-y-4 mb-6">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">URL del Sitio SharePoint</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="https://su-tenant.sharepoint.com/sites/su-sitio"
+                                        className="w-full p-4 bg-white border border-gray-100 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-green-500/5 transition-all font-medium outline-none pr-12 text-gray-700"
+                                        value={formData.sharePointSiteUrl || ''}
+                                        onChange={(e) => setFormData({ ...formData, sharePointSiteUrl: e.target.value })}
+                                    />
+                                    <ExternalLink size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" />
+                                </div>
+                                <p className="text-[10px] text-gray-400 font-medium flex items-center gap-1.5 px-2">
+                                    <Info size={10} className="text-green-500" />
+                                    URL donde se alojan las listas SP_Consultores, SP_Proyectos y SP_Asignaciones.
+                                </p>
+                            </div>
+
                             <div className="flex items-center gap-3 mb-4">
                                 <Database size={18} className="text-gray-400" />
                                 <span className="text-sm font-bold text-gray-600">Listas configuradas:</span>
