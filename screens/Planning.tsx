@@ -21,7 +21,7 @@ import {
     getOccupancyStatus,
     getStatusBadgeClass
 } from '../utils/calculations';
-import { createAssignmentInSharePoint, deleteAssignmentInSharePoint, isAuthenticated } from '../services/sharepointService';
+import { createAssignmentInSharePoint, deleteAssignmentInSharePoint, updateAssignmentInSharePoint, isAuthenticated } from '../services/sharepointService';
 
 const Planning: React.FC = () => {
     const {
@@ -32,6 +32,7 @@ const Planning: React.FC = () => {
         addAssignment,
         updateAssignment,
         removeAssignment,
+        setAssignments,
         copyPeriod,
         resetPeriod,
         settings
@@ -54,7 +55,7 @@ const Planning: React.FC = () => {
     const handleAddProject = async (consultantId: string) => {
         if (projects.length === 0) return;
 
-        const newAssignment: Assignment = {
+        const baseAssignment: Assignment = {
             id: crypto.randomUUID(),
             consultantId,
             projectId: projects[0].id,
@@ -65,16 +66,22 @@ const Planning: React.FC = () => {
             description: ''
         };
 
-        addAssignment(newAssignment);
-
-        // Sync to SharePoint if authenticated
+        // 1. Create in SharePoint first
         if (isAuthenticated()) {
             try {
-                await createAssignmentInSharePoint(newAssignment, settings.sharePointSiteUrl);
-                console.log('✅ Assignment synced to SharePoint');
+                const spId = await createAssignmentInSharePoint(baseAssignment, settings.sharePointSiteUrl);
+                console.log('✅ Assignment synced to SharePoint with ID:', spId);
+                const finalAssignment = { ...baseAssignment, sharePointId: spId };
+
+                // 2. Add to local state
+                addAssignment(finalAssignment);
             } catch (error) {
                 console.error('⚠️ Failed to sync to SharePoint:', error);
+                alert('No se pudo crear la asignación en SharePoint. Operación cancelada.');
             }
+        } else {
+            // If not authenticated, we allow local only (though user probably wants consistency)
+            addAssignment(baseAssignment);
         }
     };
 
@@ -83,17 +90,39 @@ const Planning: React.FC = () => {
             return;
         }
 
-        // Remove locally
-        removeAssignment(assignment.id);
-
-        // Delete from SharePoint if authenticated and has sharePointId
+        // 1. Delete from SharePoint first
         if (isAuthenticated() && assignment.sharePointId) {
             try {
                 await deleteAssignmentInSharePoint(assignment.id, assignment.sharePointId, settings.sharePointSiteUrl);
                 console.log('✅ Assignment deleted from SharePoint');
             } catch (error) {
                 console.error('⚠️ Failed to delete from SharePoint:', error);
+                alert('Error al eliminar en SharePoint. La operación se ha cancelado localmente.');
+                return; // STOP
             }
+        }
+
+        // 2. Remove locally
+        removeAssignment(assignment.id);
+    };
+
+    const handleUpdateAssignment = async (updated: Assignment, original: Assignment) => {
+        // 1. Update in SharePoint first if it has an ID
+        if (isAuthenticated() && updated.sharePointId) {
+            try {
+                await updateAssignmentInSharePoint(updated, settings.sharePointSiteUrl);
+                console.log('✅ Assignment updated in SharePoint');
+                // 2. ONLY update local state on success
+                updateAssignment(updated);
+            } catch (error) {
+                console.error('⚠️ Failed to update in SharePoint:', error);
+                alert('Error al sincronizar con SharePoint. El cambio ha sido revertido.');
+                // 3. Revert local state if it was changed (though we are doing SP first now)
+                updateAssignment(original);
+            }
+        } else {
+            // Fallback for local-only items or not authenticated
+            updateAssignment(updated);
         }
     };
 
@@ -245,7 +274,7 @@ const Planning: React.FC = () => {
                                                             <select
                                                                 className="w-full p-3.5 bg-transparent border-0 focus:ring-4 focus:ring-orange-500/5 rounded-2xl font-extrabold text-base text-gray-800 cursor-pointer appearance-none hover:bg-white transition-all shadow-none hover:shadow-sm"
                                                                 value={a.projectId}
-                                                                onChange={(e) => updateAssignment({ ...a, projectId: e.target.value })}
+                                                                onChange={(e) => handleUpdateAssignment({ ...a, projectId: e.target.value }, a)}
                                                             >
                                                                 {projects.map(p => (
                                                                     <option key={p.id} value={p.id}>{p.name} — {p.client}</option>
@@ -256,7 +285,7 @@ const Planning: React.FC = () => {
                                                             <select
                                                                 className="px-3 py-1.5 bg-orange-100/50 rounded-lg font-black text-[10px] text-orange-600 uppercase tracking-widest border border-orange-100/50 cursor-pointer hover:bg-orange-100 transition-all"
                                                                 value={a.period}
-                                                                onChange={(e) => updateAssignment({ ...a, period: e.target.value })}
+                                                                onChange={(e) => handleUpdateAssignment({ ...a, period: e.target.value }, a)}
                                                             >
                                                                 {getSubperiods().map(sp => (
                                                                     <option key={sp} value={sp}>{sp}</option>
@@ -270,6 +299,7 @@ const Planning: React.FC = () => {
                                                                     className="w-24 p-3.5 text-center bg-gray-50 rounded-2xl border-0 focus:ring-4 focus:ring-orange-500/5 font-black text-lg text-gray-800 transition-all shadow-inner"
                                                                     value={a.hours}
                                                                     onChange={(e) => updateAssignment({ ...a, hours: parseInt(e.target.value) || 0 })}
+                                                                    onBlur={() => handleUpdateAssignment(a, assignments.find(prev => prev.id === a.id)!)}
                                                                 />
                                                                 <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest">HRS</span>
                                                             </div>
@@ -278,7 +308,7 @@ const Planning: React.FC = () => {
                                                             <select
                                                                 className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border ${a.status === 'Confirmada' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}
                                                                 value={a.status}
-                                                                onChange={(e) => updateAssignment({ ...a, status: e.target.value as any })}
+                                                                onChange={(e) => handleUpdateAssignment({ ...a, status: e.target.value as any }, a)}
                                                             >
                                                                 <option value="Confirmada">Confirmada</option>
                                                                 <option value="Tentativa">Tentativa</option>
@@ -291,6 +321,7 @@ const Planning: React.FC = () => {
                                                                 className="w-full p-3.5 bg-transparent border-0 focus:ring-4 focus:ring-orange-500/5 rounded-2xl text-sm font-bold text-gray-600 italic placeholder:text-gray-300 hover:bg-white transition-all"
                                                                 value={a.description}
                                                                 onChange={(e) => updateAssignment({ ...a, description: e.target.value })}
+                                                                onBlur={() => handleUpdateAssignment(a, assignments.find(prev => prev.id === a.id)!)}
                                                             />
                                                         </td>
                                                         <td className="px-8 py-4 text-right">

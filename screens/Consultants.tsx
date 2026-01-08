@@ -28,7 +28,7 @@ import {
     getStatusBadgeClass,
     formatPeriod
 } from '../utils/calculations';
-import { createConsultantInSharePoint, deleteConsultantInSharePoint, isAuthenticated } from '../services/sharepointService';
+import { createConsultantInSharePoint, deleteConsultantInSharePoint, updateConsultantInSharePoint, isAuthenticated } from '../services/sharepointService';
 
 const Consultants: React.FC = () => {
     const {
@@ -77,20 +77,20 @@ const Consultants: React.FC = () => {
             return;
         }
 
-        // Delete from local store
-        setConsultants(prev => prev.filter(c => c.id !== consultant.id));
-
-        // Delete from SharePoint if authenticated and has sharePointId
+        // 1. Delete from SharePoint first if has sharePointId
         if (isAuthenticated() && consultant.sharePointId) {
             try {
                 await deleteConsultantInSharePoint(consultant.id, consultant.sharePointId, settings.sharePointSiteUrl);
                 console.log('✅ Consultant deleted from SharePoint');
             } catch (error) {
                 console.error('⚠️ Failed to delete from SharePoint:', error);
-                alert('El consultor se eliminó localmente, pero hubo un error al eliminarlo de SharePoint.');
+                alert('No se pudo eliminar de SharePoint. La operación se ha cancelado para mantener la coherencia.');
+                return; // STOP HERE
             }
         }
 
+        // 2. ONLY if SharePoint (or no SP sync needed) succeeds, update local store
+        setConsultants(prev => prev.filter(c => c.id !== consultant.id));
         setSelectedConsultant(null);
         setIsEditing(false);
     };
@@ -102,20 +102,40 @@ const Consultants: React.FC = () => {
             const consultantData = formData as Consultant;
 
             if (exists) {
-                setConsultants(prev => prev.map(c => c.id === formData.id ? consultantData : c));
-            } else {
-                setConsultants(prev => [...prev, consultantData]);
+                const updatedConsultant = { ...consultantData, sharePointId: exists.sharePointId };
 
-                // Sync to SharePoint if authenticated
-                if (isAuthenticated()) {
+                // 1. Update SharePoint first if sync is enabled
+                if (isAuthenticated() && exists.sharePointId) {
                     try {
-                        await createConsultantInSharePoint(consultantData, settings.sharePointSiteUrl);
-                        console.log('✅ Consultant synced to SharePoint');
+                        await updateConsultantInSharePoint(updatedConsultant, settings.sharePointSiteUrl);
+                        console.log('✅ Consultant update synced to SharePoint');
                     } catch (error) {
-                        console.error('⚠️ Failed to sync to SharePoint:', error);
-                        // Continue anyway - local save succeeded
+                        console.error('⚠️ Failed to sync update to SharePoint:', error);
+                        alert('Error al actualizar en SharePoint. Los cambios no se han aplicado localmente.');
+                        return; // STOP
                     }
                 }
+
+                // 2. Update local state
+                setConsultants(prev => prev.map(c => c.id === formData.id ? updatedConsultant : c));
+            } else {
+                let finalConsultant = { ...consultantData };
+
+                // 1. Create in SharePoint first
+                if (isAuthenticated()) {
+                    try {
+                        const spId = await createConsultantInSharePoint(consultantData, settings.sharePointSiteUrl);
+                        console.log('✅ Consultant created in SharePoint with ID:', spId);
+                        finalConsultant.sharePointId = spId;
+                    } catch (error) {
+                        console.error('⚠️ Failed to create in SharePoint:', error);
+                        alert('Error al crear en SharePoint. El registro no se ha guardado.');
+                        return; // STOP
+                    }
+                }
+
+                // 2. Update local state
+                setConsultants(prev => [...prev, finalConsultant]);
             }
         }
         setIsEditing(false);
