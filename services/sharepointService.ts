@@ -470,6 +470,7 @@ export const createConsultantInSharePoint = async (consultant: Consultant, siteU
         Email: consultant.email,
         Role: consultant.role,
         IsActive: consultant.active,
+        Notes: consultant.notes || '',
     };
 
     const result = await createListItem(siteId, listId, fields);
@@ -493,6 +494,7 @@ export const createProjectInSharePoint = async (project: Project, siteUrl?: stri
         ClientName: project.client || '',
         ProjectType: project.type,
         IsActive: project.active,
+        Description: project.description || '',
     };
 
     const result = await createListItem(siteId, listId, fields);
@@ -543,6 +545,7 @@ export const updateConsultantInSharePoint = async (consultant: Consultant, siteU
         Email: consultant.email,
         Role: consultant.role,
         IsActive: consultant.active,
+        Notes: consultant.notes || '',
     };
 
     await updateListItem(siteId, listId, consultant.sharePointId, fields);
@@ -567,6 +570,7 @@ export const updateProjectInSharePoint = async (project: Project, siteUrl?: stri
         ClientName: project.client || '',
         ProjectType: project.type,
         IsActive: project.active,
+        Description: project.description || '',
     };
 
     await updateListItem(siteId, listId, project.sharePointId, fields);
