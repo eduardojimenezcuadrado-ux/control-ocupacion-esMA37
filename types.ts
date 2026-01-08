@@ -45,8 +45,8 @@ export interface Absence {
 }
 
 export interface AppSettings {
-  benchMonthlyThreshold: number;
-  benchWeeklyThreshold: number;
+  availableMonthlyThreshold: number;
+  availableWeeklyThreshold: number;
   standardMonthlyCapacity: number;
   standardWeeklyCapacity: number;
   defaultView: 'Mensual' | 'Semanal';
