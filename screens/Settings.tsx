@@ -62,12 +62,25 @@ const SettingsScreen: React.FC = () => {
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#f78c38] uppercase tracking-widest">
-                        <SettingsIcon size={14} /> System Configuration
+                        <SettingsIcon size={14} /> Configuración del Sistema
                     </div>
                     <h1>Preferencias del Sistema</h1>
                     <p className="text-gray-500 font-medium">Ajusta los algoritmos de cálculo y parámetros visuales</p>
                 </div>
+                <button
+                    onClick={handleSave}
+                    className="btn btn-primary px-8 shadow-premium flex items-center gap-2"
+                >
+                    <Save size={18} />
+                    Guardar Todos los Ajustes
+                </button>
             </header>
+
+            {showSuccess && (
+                <div className="p-4 bg-green-500 text-white rounded-2xl flex items-center gap-3 text-sm font-bold shadow-lg shadow-green-500/20 animate-in slide-in-from-top-4">
+                    <CheckCircle2 size={20} /> Todos los ajustes han sido guardados correctamente
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-7 space-y-8">
@@ -189,6 +202,13 @@ const SettingsScreen: React.FC = () => {
                                     Obtener API Key <ExternalLink size={10} />
                                 </a>
                             </div>
+
+                            <button
+                                onClick={handleSave}
+                                className="w-full py-3 bg-purple-500 text-white rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-purple-600 transition-all shadow-lg shadow-purple-500/20 active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                <Save size={14} /> Guardar Integración Gemini
+                            </button>
                         </div>
                     </div>
 
@@ -203,7 +223,7 @@ const SettingsScreen: React.FC = () => {
                             </div>
                         </div>
 
-                        <form onSubmit={handleSave} className="space-y-8">
+                        <div className="space-y-8">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Umbral Bench Mensual</label>
@@ -260,19 +280,19 @@ const SettingsScreen: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="pt-8 border-t border-gray-50 flex items-center justify-between">
-                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest max-w-[200px]">Estas variables afectan a los motores de recomendación.</span>
-                                <button type="submit" className="btn btn-primary px-8 shadow-premium">
-                                    <Save size={18} /> Guardar Ajustes
-                                </button>
-                            </div>
+                            <button
+                                onClick={handleSave}
+                                className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 active:scale-95 flex items-center justify-center gap-2 mt-8"
+                            >
+                                <Save size={14} /> Guardar Umbrales
+                            </button>
 
                             {showSuccess && (
                                 <div className="p-4 bg-green-500 text-white rounded-2xl flex items-center gap-3 text-sm font-bold shadow-lg shadow-green-500/20 animate-in slide-in-from-top-4">
                                     <CheckCircle2 size={20} /> Configuración sincronizada
                                 </div>
                             )}
-                        </form>
+                        </div>
                     </div>
 
                     <div className="card glass border-0 shadow-premium p-8">
@@ -331,7 +351,7 @@ const SettingsScreen: React.FC = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 
