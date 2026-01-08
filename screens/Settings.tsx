@@ -111,7 +111,7 @@ const SettingsScreen: React.FC = () => {
                                 </div>
                                 <p className="text-[10px] text-gray-400 font-medium flex items-center gap-1.5 px-2">
                                     <Info size={10} className="text-green-500" />
-                                    URL donde se alojan las listas SP_Consultores, SP_Proyectos y SP_Asignaciones.
+                                    URL donde se alojan las listas SP_Consultores, SP_Proyectos, SP_Asignaciones y SP_Ausencias.
                                 </p>
                             </div>
 
@@ -119,7 +119,7 @@ const SettingsScreen: React.FC = () => {
                                 <Database size={18} className="text-gray-400" />
                                 <span className="text-sm font-bold text-gray-600">Listas configuradas:</span>
                             </div>
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <div className="bg-white p-3 rounded-xl text-center border border-gray-100">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase">Consultores</span>
                                     <p className="text-xs font-mono text-green-600 mt-1">SP_Consultores</p>
@@ -131,6 +131,10 @@ const SettingsScreen: React.FC = () => {
                                 <div className="bg-white p-3 rounded-xl text-center border border-gray-100">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase">Asignaciones</span>
                                     <p className="text-xs font-mono text-green-600 mt-1">SP_Asignaciones</p>
+                                </div>
+                                <div className="bg-white p-3 rounded-xl text-center border border-gray-100 shadow-sm border-green-100">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase">Ausencias</span>
+                                    <p className="text-xs font-mono text-green-600 mt-1">SP_Ausencias</p>
                                 </div>
                             </div>
                         </div>

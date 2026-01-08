@@ -16,8 +16,9 @@ import {
     LayoutList,
     UserCheck
 } from 'lucide-react';
-import { AbsenceCategory, AppSettings } from '../types';
+import { Absence, AbsenceCategory, AppSettings } from '../types';
 import { formatPeriod } from '../utils/calculations';
+import { createAbsenceInSharePoint, deleteAbsenceInSharePoint, isAuthenticated } from '../services/sharepointService';
 
 const Absences: React.FC = () => {
     const { consultants, absences, addAbsence, removeAbsence, settings } = useAppStore();
@@ -32,12 +33,14 @@ const Absences: React.FC = () => {
     const periodData = useMemo(() => formatPeriod(date, isWeekly), [date, isWeekly]);
     const periodId = periodData.id;
 
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedConsultants.length === 0) return;
 
-        selectedConsultants.forEach(cid => {
-            addAbsence({
+        const newAbsences: Absence[] = [];
+
+        for (const cid of selectedConsultants) {
+            const absenceData: Absence = {
                 id: crypto.randomUUID(),
                 consultantId: cid,
                 category,
@@ -45,13 +48,49 @@ const Absences: React.FC = () => {
                 period: periodId,
                 isWeekly,
                 notes
-            });
-        });
+            };
+
+            // 1. Sync to SharePoint first if authenticated
+            if (isAuthenticated()) {
+                try {
+                    const spId = await createAbsenceInSharePoint(absenceData, settings.sharePointSiteUrl);
+                    console.log('✅ Absence created in SharePoint with ID:', spId);
+                    absenceData.sharePointId = spId;
+                } catch (error) {
+                    console.error('⚠️ Failed to sync to SharePoint:', error);
+                    alert(`Error al guardar en SharePoint para uno de los consultores. Operación detenida.`);
+                    return; // Stop for safety
+                }
+            }
+            newAbsences.push(absenceData);
+        }
+
+        // 2. Update local state
+        newAbsences.forEach(a => addAbsence(a));
 
         setShowSuccess(true);
         setSelectedConsultants([]);
         setNotes('');
         setTimeout(() => setShowSuccess(false), 3000);
+    };
+
+    const handleDeleteAbsence = async (absence: Absence) => {
+        if (!window.confirm('¿Estás seguro de que deseas eliminar este registro de ausencia?')) return;
+
+        // 1. Delete from SharePoint first
+        if (isAuthenticated() && absence.sharePointId) {
+            try {
+                await deleteAbsenceInSharePoint(absence.id, absence.sharePointId, settings.sharePointSiteUrl);
+                console.log('✅ Absence deleted from SharePoint');
+            } catch (error) {
+                console.error('⚠️ Failed to delete absence from SharePoint:', error);
+                alert('No se pudo eliminar de SharePoint. Operación cancelada.');
+                return;
+            }
+        }
+
+        // 2. Update local state
+        removeAbsence(absence.id);
     };
 
     const toggleConsultant = (id: string) => {
@@ -227,7 +266,7 @@ const Absences: React.FC = () => {
                                                     </td>
                                                     <td className="px-8 text-right">
                                                         <button
-                                                            onClick={() => removeAbsence(a.id)}
+                                                            onClick={() => handleDeleteAbsence(a)}
                                                             className="p-3 text-gray-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                                                         >
                                                             <Trash2 size={18} />
