@@ -25,7 +25,8 @@ import {
     RefreshCw,
     Key,
     Lightbulb,
-    Target
+    Target,
+    Play
 } from 'lucide-react';
 import {
     LineChart,
@@ -94,12 +95,14 @@ const Dashboard: React.FC = () => {
         }
     }, [settings.geminiApiKey, consultants, projects, assignments, absences, settings, period, isWeekly]);
 
-    // Auto-fetch recommendations when API key is configured and period changes
+    // AI audit is now strictly manual as per user request
+    /* 
     useEffect(() => {
         if (settings.geminiApiKey) {
             fetchRecommendations();
         }
     }, [period, settings.geminiApiKey]);
+    */
 
     const changePeriod = (delta: number) => {
         const newDate = new Date(date);
@@ -130,7 +133,7 @@ const Dashboard: React.FC = () => {
         let totalHours = 0;
         let totalTentative = 0;
         let overloadCount = 0;
-        let availableCount = 0;
+        let totalFreeHours = 0;
         const capacity = isWeekly ? settings.standardWeeklyCapacity : settings.standardMonthlyCapacity;
 
         consultants.filter(c => c.active).forEach(c => {
@@ -140,8 +143,13 @@ const Dashboard: React.FC = () => {
             totalHours += occ.confirmedHours + occ.absenceHours;
             totalTentative += occ.tentativeHours;
             if (status === 'Sobrecarga') overloadCount++;
-            if (status === 'Disponible') availableCount++;
+
+            // Available FTE calculation: sum of positive remaining capacity per consultant
+            totalFreeHours += Math.max(0, capacity - occ.totalHours);
         });
+
+        const availableCount = totalFreeHours / capacity;
+
 
         const totalFTE = getFTE(totalHours + (includeTentative ? totalTentative : 0), capacity);
         const occupancyPct = (totalHours / (filteredConsultants.length * capacity)) * 100;
@@ -233,12 +241,12 @@ const Dashboard: React.FC = () => {
                     tooltip="Full-Time Equivalent: Horas totales divididas por la capacidad estándar (160h/mes o 40h/sem)."
                 />
                 <KPICard
-                    label="Consultores Disponibles"
-                    value={stats.availableCount}
+                    label="FTE Disponible"
+                    value={stats.availableCount.toFixed(1)}
                     icon={CheckCircle2}
                     variant="white"
                     color="text-green-500"
-                    tooltip="Número de consultores con carga inferior al umbral de disponibilidad configurado."
+                    tooltip="Total de capacidad libre (FTE) acumulada del equipo, sin restar sobrecargas."
                 />
                 <KPICard
                     label="Puntos de Riesgo"
@@ -362,14 +370,12 @@ const Dashboard: React.FC = () => {
                         <div className="table-container border-0 shadow-premium animate-in fade-in duration-300">
                             <table>
                                 <thead>
-                                    <tr>
-                                        <th className="w-12 text-center"></th>
-                                        <th className="pl-6">Consultor / Especialidad</th>
-                                        <th className="text-center">Confirmadas</th>
-                                        <th className="text-center">Dedicación</th>
-                                        <th className="text-center">FTE</th>
-                                        <th>Estado Actual</th>
-                                        <th className="text-right pr-6"></th>
+                                    <tr className="border-b border-gray-100">
+                                        <th className="pl-8 py-5">Consultor / Especialidad</th>
+                                        <th className="text-center py-5">Confirmadas</th>
+                                        <th className="text-center py-5">Dedicación</th>
+                                        <th className="text-center py-5">FTE</th>
+                                        <th className="text-left py-5">Estado Actual</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -380,44 +386,34 @@ const Dashboard: React.FC = () => {
                                         const fte = getFTE(includeTentative ? occ.totalHours : occ.confirmedHours + occ.absenceHours, capacity);
 
                                         return (
-                                            <tr key={c.id} className="group hover:bg-gray-50/50 transition-colors">
-                                                <td className="text-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedForChart.includes(c.id)}
-                                                        onChange={() => toggleChartSelect(c.id)}
-                                                        className="w-4 h-4 rounded-md border-gray-300 text-[#f78c38] focus:ring-orange-500/20 transition-all cursor-pointer"
-                                                    />
-                                                </td>
-                                                <td className="pl-6">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-xs font-black text-gray-400 uppercase tracking-tighter border border-gray-100 shadow-sm group-hover:bg-orange-500 group-hover:text-white group-hover:border-orange-500 transition-all">
+                                            <tr key={c.id} className="group hover:bg-gray-50/50 transition-colors border-b border-gray-50 last:border-0 h-[100px]">
+                                                <td className="pl-8 py-4 align-middle">
+                                                    <div className="flex items-center gap-4 h-full">
+                                                        <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-sm font-black text-gray-400 uppercase tracking-tighter border border-gray-100 shadow-sm group-hover:bg-[#f78c38] group-hover:text-white group-hover:border-transparent transition-all duration-300">
                                                             {c.name.split(' ').map(n => n[0]).join('')}
                                                         </div>
-                                                        <div>
-                                                            <div className="font-bold text-gray-800 tracking-tight text-sm">{c.name}</div>
-                                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{c.role}</div>
+                                                        <div className="flex flex-col justify-center">
+                                                            <div className="font-black text-gray-800 tracking-tight text-base leading-tight">{c.name}</div>
+                                                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 opacity-60">{c.role}</div>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="text-center font-bold text-gray-700">{occ.confirmedHours}h</td>
-                                                <td className="text-center">
-                                                    <span className="font-extrabold text-[#252729] text-lg">{includeTentative ? occ.totalHours : occ.confirmedHours + occ.absenceHours}</span>
-                                                    <span className="text-[10px] font-bold text-gray-300 ml-1">/ {capacity}h</span>
+                                                <td className="text-center font-black text-gray-700 align-middle py-4">{occ.confirmedHours}h</td>
+                                                <td className="text-center align-middle py-4">
+                                                    <span className="font-black text-[#252729] text-xl">{includeTentative ? occ.totalHours : occ.confirmedHours + occ.absenceHours}</span>
+                                                    <span className="text-[11px] font-black text-gray-300 ml-1.5 uppercase tracking-tighter">/ {capacity}h</span>
                                                 </td>
-                                                <td className="text-center">
-                                                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border font-mono text-xs font-bold ${fte > 1.1 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 border-gray-100'}`}>
-                                                        {fte.toFixed(1)} <ArrowUpRight size={10} className="text-inherit opacity-50" />
+                                                <td className="text-center align-middle py-4">
+                                                    <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl border-2 font-black text-xs ${fte > 1.1 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 border-gray-100'}`}>
+                                                        {fte.toFixed(1)} <ArrowUpRight size={12} className="opacity-40" />
                                                     </div>
                                                 </td>
-                                                <td>
-                                                    <span className={`badge ${getStatusBadgeClass(status)}`}>
+                                                <td className="align-middle py-4">
+                                                    <span className={`badge ${getStatusBadgeClass(status)} shadow-sm font-black`}>
                                                         {status}
                                                     </span>
                                                 </td>
-                                                <td className="text-right pr-6">
-                                                    <ChevronRight size={18} className="text-gray-200 group-hover:text-orange-500 transition-all translate-x-0 group-hover:translate-x-1" />
-                                                </td>
+
                                             </tr>
                                         );
                                     })}
@@ -456,8 +452,7 @@ const Dashboard: React.FC = () => {
                                 )}
                             </div>
 
-                            {/* No API Key State */}
-                            {!settings.geminiApiKey && (
+                            {!settings.geminiApiKey ? (
                                 <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center space-y-4">
                                     <div className="w-12 h-12 mx-auto bg-gray-700 rounded-xl flex items-center justify-center">
                                         <Key size={24} className="text-gray-500" />
@@ -469,7 +464,23 @@ const Dashboard: React.FC = () => {
                                         </p>
                                     </div>
                                 </div>
-                            )}
+                            ) : recommendations.length === 0 && !isLoadingAI ? (
+                                <div className="p-8 bg-white/5 rounded-[32px] border border-white/10 text-center space-y-6 animate-in fade-in zoom-in duration-500">
+                                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-orange-500/20 to-pink-500/20 rounded-[28px] flex items-center justify-center border border-white/5">
+                                        <Activity size={40} className="text-orange-500 animate-pulse" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="text-base font-black text-white tracking-tight">Análisis bajo demanda</p>
+                                        <p className="text-[11px] text-gray-400 font-medium leading-relaxed">Ejecuta el asistente IA para encontrar cuellos de botella y optimizar la asignación del equipo.</p>
+                                    </div>
+                                    <button
+                                        onClick={fetchRecommendations}
+                                        className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-orange-500/20 transition-all active:scale-95 flex items-center justify-center gap-3"
+                                    >
+                                        <Play size={14} fill="currentColor" /> Lanzar Auditoría IA
+                                    </button>
+                                </div>
+                            ) : null}
 
                             {/* Loading State */}
                             {settings.geminiApiKey && isLoadingAI && (
