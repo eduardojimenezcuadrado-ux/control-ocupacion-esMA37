@@ -127,7 +127,7 @@ const Planning: React.FC = () => {
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#f78c38] uppercase tracking-widest">
-                        <CalendarDays size={14} /> Workbench Planning
+                        <CalendarDays size={14} /> Planificación Global
                     </div>
                     <h1>Escritorio de Planificación</h1>
                     <p className="text-gray-500 font-medium">Gestión avanzada de asignaciones para {period.label}</p>

@@ -331,7 +331,7 @@ const Consultants: React.FC = () => {
                                     return (
                                         <div className="space-y-4">
                                             <div className="flex items-center gap-3">
-                                                <span className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-white/10 ${status === 'Sobrecarga' ? 'bg-red-500/20 text-red-400' : status === 'Bench' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
+                                                <span className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-white/10 ${status === 'Sobrecarga' ? 'bg-red-500/20 text-red-400' : status === 'Disponible' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
                                                     {status}
                                                 </span>
                                             </div>

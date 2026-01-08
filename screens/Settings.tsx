@@ -226,29 +226,29 @@ const SettingsScreen: React.FC = () => {
                         <div className="space-y-8">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Umbral Bench Mensual</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Umbral Disponibilidad Mensual</label>
                                     <div className="relative group">
                                         <input
                                             type="number"
                                             className="w-full p-4 bg-gray-50 border-0 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all font-extrabold outline-none"
-                                            value={formData.benchMonthlyThreshold}
-                                            onChange={(e) => setFormData({ ...formData, benchMonthlyThreshold: parseInt(e.target.value) || 0 })}
+                                            value={formData.availableMonthlyThreshold}
+                                            onChange={(e) => setFormData({ ...formData, availableMonthlyThreshold: parseInt(e.target.value) || 0 })}
                                         />
                                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-300">HRS</span>
                                     </div>
                                     <p className="text-[10px] text-gray-400 font-medium flex items-center gap-1.5 px-2">
                                         <Info size={10} className="text-orange-400" />
-                                        Riesgo si la carga es inferior a este valor.
+                                        Riesgo si la carga es inferior a este valor (Personal Disponible).
                                     </p>
                                 </div>
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Umbral Bench Semanal</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Umbral Disponibilidad Semanal</label>
                                     <div className="relative">
                                         <input
                                             type="number"
                                             className="w-full p-4 bg-gray-50 border-0 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all font-extrabold outline-none"
-                                            value={formData.benchWeeklyThreshold}
-                                            onChange={(e) => setFormData({ ...formData, benchWeeklyThreshold: parseInt(e.target.value) || 0 })}
+                                            value={formData.availableWeeklyThreshold}
+                                            onChange={(e) => setFormData({ ...formData, availableWeeklyThreshold: parseInt(e.target.value) || 0 })}
                                         />
                                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-300">HRS</span>
                                     </div>

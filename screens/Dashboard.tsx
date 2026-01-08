@@ -61,7 +61,7 @@ const Dashboard: React.FC = () => {
 
     const [filter, setFilter] = useState({
         onlyOverload: false,
-        onlyBench: false,
+        onlyAvailable: false,
         projectType: 'Todos',
         search: '',
     });
@@ -117,9 +117,9 @@ const Dashboard: React.FC = () => {
             const status = getOccupancyStatus(occ.totalHours, settings, isWeekly);
 
             const matchOverload = !filter.onlyOverload || status === 'Sobrecarga';
-            const matchBench = !filter.onlyBench || status === 'Bench';
+            const matchAvailable = !filter.onlyAvailable || status === 'Disponible';
 
-            return matchSearch && matchOverload && matchBench;
+            return matchSearch && matchOverload && matchAvailable;
         });
     }, [consultants, assignments, absences, period, isWeekly, includeTentative, filter, settings]);
 
@@ -127,7 +127,7 @@ const Dashboard: React.FC = () => {
         let totalHours = 0;
         let totalTentative = 0;
         let overloadCount = 0;
-        let benchCount = 0;
+        let availableCount = 0;
         const capacity = isWeekly ? settings.standardWeeklyCapacity : settings.standardMonthlyCapacity;
 
         filteredConsultants.forEach(c => {
@@ -137,7 +137,7 @@ const Dashboard: React.FC = () => {
             totalHours += occ.confirmedHours + occ.absenceHours;
             totalTentative += occ.tentativeHours;
             if (status === 'Sobrecarga') overloadCount++;
-            if (status === 'Bench') benchCount++;
+            if (status === 'Disponible') availableCount++;
         });
 
         const totalFTE = getFTE(totalHours + (includeTentative ? totalTentative : 0), capacity);
@@ -148,7 +148,7 @@ const Dashboard: React.FC = () => {
             totalHours,
             totalTentative,
             overloadCount,
-            benchCount,
+            availableCount,
             totalFTE: isNaN(totalFTE) ? 0 : totalFTE,
             occupancyPct: finalOccupancy.toFixed(1),
         };
@@ -233,7 +233,7 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <KPICard label="Ocupación Global" value={`${stats.occupancyPct}%`} icon={TrendingUp} variant="orange" subtext={`${stats.totalHours}h confirmadas`} />
                 <KPICard label="Capacidad FTE" value={stats.totalFTE.toFixed(1)} icon={Users} variant="dark" />
-                <KPICard label="Consultores Libres" value={stats.benchCount} icon={CheckCircle2} variant="white" color="text-green-500" />
+                <KPICard label="Consultores Disponibles" value={stats.availableCount} icon={CheckCircle2} variant="white" color="text-green-500" />
                 <KPICard label="Puntos de Riesgo" value={stats.overloadCount} icon={AlertTriangle} variant="white" color="text-red-500" />
                 <KPICard label="Carga Tentativa" value={`${stats.totalTentative}h`} icon={Zap} variant="white" color="text-blue-500" />
             </div>
@@ -503,7 +503,7 @@ const Dashboard: React.FC = () => {
                                             <div className="flex items-start justify-between">
                                                 <p className="text-sm font-bold leading-snug pr-4">{rec.title}</p>
                                                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${rec.type === 'alert' ? 'bg-red-500' :
-                                                        rec.type === 'opportunity' ? 'bg-blue-500' : 'bg-orange-500'
+                                                    rec.type === 'opportunity' ? 'bg-blue-500' : 'bg-orange-500'
                                                     }`} />
                                             </div>
                                             <p className="text-[11px] font-medium text-gray-400">{rec.description}</p>
@@ -556,7 +556,7 @@ const Dashboard: React.FC = () => {
                             </button>
 
                             <button
-                                onClick={() => setFilter({ ...filter, onlyOverload: !filter.onlyOverload, onlyBench: false })}
+                                onClick={() => setFilter({ ...filter, onlyOverload: !filter.onlyOverload, onlyAvailable: false })}
                                 className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all group ${filter.onlyOverload ? 'bg-red-50 border-red-500/20 text-red-700' : 'bg-gray-50/50 border-transparent text-gray-400 hover:bg-white hover:border-gray-100'}`}
                             >
                                 <span className="text-xs font-black uppercase tracking-widest group-hover:text-primary transition-colors">Ver Sobrecarga</span>
@@ -564,11 +564,11 @@ const Dashboard: React.FC = () => {
                             </button>
 
                             <button
-                                onClick={() => setFilter({ ...filter, onlyBench: !filter.onlyBench, onlyOverload: false })}
-                                className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all group ${filter.onlyBench ? 'bg-blue-50 border-blue-500/20 text-blue-700' : 'bg-gray-50/50 border-transparent text-gray-400 hover:bg-white hover:border-gray-100'}`}
+                                onClick={setFilter.bind(null, { ...filter, onlyAvailable: !filter.onlyAvailable, onlyOverload: false })}
+                                className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all group ${filter.onlyAvailable ? 'bg-blue-50 border-blue-500/20 text-blue-700' : 'bg-gray-50/50 border-transparent text-gray-400 hover:bg-white hover:border-gray-100'}`}
                             >
-                                <span className="text-xs font-black uppercase tracking-widest group-hover:text-primary transition-colors">Ver Bench</span>
-                                <Clock size={16} className={filter.onlyBench ? 'text-blue-500' : 'text-gray-300 group-hover:text-blue-400'} />
+                                <span className="text-xs font-black uppercase tracking-widest group-hover:text-primary transition-colors">Ver Disponibles</span>
+                                <Clock size={16} className={filter.onlyAvailable ? 'text-blue-500' : 'text-gray-300 group-hover:text-blue-400'} />
                             </button>
                         </div>
                     </div>
