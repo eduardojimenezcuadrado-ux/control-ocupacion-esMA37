@@ -314,6 +314,7 @@ const Projects: React.FC = () => {
                                 <select name="type" defaultValue={selectedProject?.type || 'Cliente'} className="w-full p-4 bg-gray-50 border-0 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-orange-500/5 outline-none transition-all font-bold group">
                                     <option value="Cliente">💼 Facturable (Cliente)</option>
                                     <option value="Interno">🏠 Interno / I+D</option>
+                                    <option value="Tentativo">⏳ Preventa / Tentativo</option>
                                     <option value="Ausencia">🏖 Estructura / Ausencia</option>
                                 </select>
                             </div>
@@ -360,7 +361,7 @@ const Projects: React.FC = () => {
                         />
                     </div>
                     <div className="flex bg-gray-100/50 p-1 rounded-2xl border border-gray-100">
-                        {['Todos', 'Cliente', 'Interno'].map(type => (
+                        {['Todos', 'Cliente', 'Interno', 'Tentativo'].map(type => (
                             <button
                                 key={type}
                                 onClick={() => setTypeFilter(type as any)}
@@ -421,7 +422,10 @@ const Projects: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td>
-                                                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${p.type === 'Cliente' ? 'bg-blue-50 text-blue-500 border-blue-100' : 'bg-orange-50 text-orange-500 border-orange-100'}`}>
+                                                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${p.type === 'Cliente' ? 'bg-blue-50 text-blue-500 border-blue-100' :
+                                                        p.type === 'Tentativo' ? 'bg-orange-50 text-orange-600 border-orange-200 shadow-sm' :
+                                                            'bg-gray-50 text-gray-500 border-gray-100'
+                                                    }`}>
                                                     {p.type}
                                                 </span>
                                             </td>

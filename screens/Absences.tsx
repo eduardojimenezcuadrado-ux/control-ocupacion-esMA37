@@ -281,28 +281,36 @@ const Absences: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="card bg-gradient-to-br from-[#252729] to-black text-white border-0 shadow-2xl overflow-hidden relative group">
-                        <div className="absolute -right-12 -bottom-12 opacity-10 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-1000">
-                            <Clock size={280} strokeWidth={1} />
-                        </div>
-                        <div className="relative z-10 space-y-6">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-orange-500/20 rounded-xl text-orange-400">
-                                    <Info size={24} />
+                    <div className="card bg-[#252729] text-white border-0 shadow-2xl relative group p-8 lg:p-12">
+                        <div className="relative z-10 space-y-8">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-orange-500 rounded-2xl text-white shadow-lg shadow-orange-500/20">
+                                    <Info size={28} />
                                 </div>
-                                <h3 className="mb-0 text-white font-black tracking-tight">Política de Disponibilidad</h3>
+                                <div>
+                                    <h3 className="mb-0 text-white font-black tracking-tight text-2xl">Política de Disponibilidad</h3>
+                                    <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mt-1">Directrices de Gestión de Cargas</p>
+                                </div>
                             </div>
-                            <p className="text-gray-400 text-sm leading-relaxed max-w-xl font-medium">
-                                Los registros de ausencia impactan directamente en el cálculo de la capacidad neta. Una ausencia de <span className="text-white font-bold">160h mensuales</span> equivale a una indisponibilidad absoluta para ese periodo.
+
+                            <p className="text-gray-400 text-lg leading-relaxed max-w-2xl font-medium">
+                                Los registros de ausencia impactan directamente en el cálculo de la capacidad neta. Una ausencia de <span className="text-white font-black underline decoration-orange-500 decoration-4 underline-offset-4">160h mensuales</span> equivale a una indisponibilidad absoluta para ese periodo.
                             </p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                                <div className="p-5 bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 space-y-2">
-                                    <div className="text-orange-400 font-extrabold text-xs uppercase tracking-[0.2em]">Prioridad de Carga</div>
-                                    <div className="text-xs text-gray-500 font-medium leading-snug">Las ausencias tienen prioridad absoluta sobre cualquier asignación de proyecto en el motor de IA.</div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                                <div className="p-6 bg-white/5 backdrop-blur-md rounded-3xl border border-white/10 space-y-3 hover:bg-white/10 transition-all group/card">
+                                    <div className="text-orange-500 font-black text-[11px] uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <div className="w-1 h-4 bg-orange-500 rounded-full" />
+                                        Prioridad de Carga
+                                    </div>
+                                    <div className="text-sm text-gray-400 font-semibold leading-relaxed">Las ausencias tienen prioridad absoluta sobre cualquier asignación de proyecto en el motor de IA.</div>
                                 </div>
-                                <div className="p-5 bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 space-y-2">
-                                    <div className="text-orange-400 font-extrabold text-xs uppercase tracking-[0.2em]">Cálculo Proporcional</div>
-                                    <div className="text-xs text-gray-500 font-medium leading-snug">Días sueltos deben registrarse convirtiendo días a horas (8h/día estándar) para precisión FTE.</div>
+                                <div className="p-6 bg-white/5 backdrop-blur-md rounded-3xl border border-white/10 space-y-3 hover:bg-white/10 transition-all group/card">
+                                    <div className="text-orange-500 font-black text-[11px] uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <div className="w-1 h-4 bg-orange-500 rounded-full" />
+                                        Cálculo Proporcional
+                                    </div>
+                                    <div className="text-sm text-gray-400 font-semibold leading-relaxed">Días sueltos deben registrarse convirtiendo días a horas (8h/día estándar) para una precisión FTE milimétrica.</div>
                                 </div>
                             </div>
                         </div>

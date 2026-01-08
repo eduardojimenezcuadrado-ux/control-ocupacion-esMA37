@@ -18,7 +18,8 @@ import {
     LayoutGrid,
     ListFilter,
     Cloud,
-    Trash
+    Trash,
+    ChevronLeft
 } from 'lucide-react';
 import { Consultant } from '../types';
 import {
@@ -40,13 +41,19 @@ const Consultants: React.FC = () => {
         projects
     } = useAppStore();
 
+    const [date, setDate] = useState(new Date(2026, 0, 1));
+    const period = useMemo(() => formatPeriod(date, false), [date]);
+
+    const changePeriod = (delta: number) => {
+        const newDate = new Date(date);
+        newDate.setMonth(newDate.getMonth() + delta);
+        setDate(newDate);
+    };
+
     const [search, setSearch] = useState('');
     const [selectedConsultant, setSelectedConsultant] = useState<Consultant | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState<Partial<Consultant>>({});
-
-    const date = new Date(2026, 0, 1);
-    const period = useMemo(() => formatPeriod(date, false), [date]);
 
     const filteredConsultants = useMemo(() => {
         return consultants.filter(c =>
@@ -152,12 +159,39 @@ const Consultants: React.FC = () => {
                     <h1>Gestión de Talento</h1>
                     <p className="text-gray-500 font-medium">Visualiza disponibilidad y perfiles técnicos del equipo</p>
                 </div>
-                {!isEditing && (
+                {!isEditing && !selectedConsultant && (
                     <button onClick={handleAddNew} className="btn btn-primary shadow-xl px-10 py-4 text-sm uppercase tracking-widest font-black">
                         <Plus size={20} /> Registrar Consultor
                     </button>
                 )}
             </header>
+
+            {!isEditing && !selectedConsultant && (
+                <div className="card glass border-0 flex items-center justify-between gap-6 py-4 shadow-premium mb-8">
+                    <div className="flex items-center bg-gray-50 p-1 rounded-2xl border border-gray-100 shadow-sm ml-2">
+                        <button onClick={() => changePeriod(-1)} className="p-2.5 hover:bg-white hover:shadow-md rounded-xl text-gray-400 transition-all active:scale-95"><ChevronLeft size={20} /></button>
+                        <div className="px-8 font-black text-xs text-gray-800 uppercase tracking-tighter min-w-[160px] text-center">
+                            {period.label}
+                        </div>
+                        <button onClick={() => changePeriod(1)} className="p-2.5 hover:bg-white hover:shadow-md rounded-xl text-gray-400 transition-all active:scale-95"><ChevronRight size={20} /></button>
+                    </div>
+
+                    <div className="relative flex-1 max-w-xl">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Filtrar por nombre, cargo o habilidad..."
+                            className="w-full pl-12 pr-4 py-3 bg-gray-50 border-0 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all outline-none font-medium"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="p-3 bg-gray-50 rounded-2xl text-gray-300 mr-2 border border-transparent">
+                        <ListFilter size={20} />
+                    </div>
+                </div>
+            )}
 
             {isEditing ? (
                 <div className="card glass max-w-2xl mx-auto shadow-premium border-0 animate-in zoom-in-95 duration-300">
@@ -426,103 +460,85 @@ const Consultants: React.FC = () => {
                     </div>
                 </div>
             ) : (
-                <div className="space-y-6">
-                    <div className="card glass border-0 flex items-center gap-6 py-4 shadow-premium">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Filtrar por nombre, cargo o habilidad..."
-                                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-0 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all outline-none font-medium"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex items-center gap-2 group">
-                            <div className="p-3 bg-gray-50 rounded-2xl text-gray-300 group-hover:bg-orange-50 group-hover:text-orange-500 transition-all cursor-pointer border border-transparent hover:border-orange-100">
-                                <ListFilter size={20} />
-                            </div>
-                        </div>
-                    </div>
 
-                    <div className="table-container border-0 shadow-premium">
-                        <table>
-                            <thead>
+
+                <div className="table-container border-0 shadow-premium">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th className="px-8">Consultor</th>
+                                <th>Rol / Cargo Principal</th>
+                                <th className="text-center">Dedicación Mensual</th>
+                                <th className="text-center">FTE</th>
+                                <th>Visualización Estado</th>
+                                <th className="text-right px-8"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {filteredConsultants.length === 0 ? (
                                 <tr>
-                                    <th className="px-8">Consultor</th>
-                                    <th>Rol / Cargo Principal</th>
-                                    <th className="text-center">Dedicación Mensual</th>
-                                    <th className="text-center">FTE</th>
-                                    <th>Visualización Estado</th>
-                                    <th className="text-right px-8"></th>
+                                    <td colSpan={6} className="py-20 text-center">
+                                        <div className="flex flex-col items-center lg:flex-row lg:justify-center gap-4 text-gray-300">
+                                            <LayoutGrid size={48} strokeWidth={1} />
+                                            <span className="text-sm font-bold uppercase tracking-widest">
+                                                No se encontraron consultores con ese criterio.
+                                            </span>
+                                        </div>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {filteredConsultants.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} className="py-20 text-center">
-                                            <div className="flex flex-col items-center lg:flex-row lg:justify-center gap-4 text-gray-300">
-                                                <LayoutGrid size={48} strokeWidth={1} />
-                                                <span className="text-sm font-bold uppercase tracking-widest">
-                                                    No se encontraron consultores con ese criterio.
-                                                </span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredConsultants.map(c => {
-                                        const occ = getPeriodOccupancy(c.id, assignments, absences, period.id, false, true);
-                                        const status = getOccupancyStatus(occ.totalHours, settings, false);
-                                        const fte = getFTE(occ.totalHours, settings.standardMonthlyCapacity);
+                            ) : (
+                                filteredConsultants.map(c => {
+                                    const occ = getPeriodOccupancy(c.id, assignments, absences, period.id, false, true);
+                                    const status = getOccupancyStatus(occ.totalHours, settings, false);
+                                    const fte = getFTE(occ.totalHours, settings.standardMonthlyCapacity);
 
-                                        return (
-                                            <tr
-                                                key={c.id}
-                                                className="group cursor-pointer hover:bg-gray-50/50 transition-all"
-                                                onClick={() => setSelectedConsultant(c)}
-                                            >
-                                                <td className="px-8 py-6">
-                                                    <div className="flex items-center gap-6">
-                                                        <div className="w-16 h-16 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl flex items-center justify-center text-xs font-black text-gray-400 group-hover:from-orange-500 group-hover:to-orange-400 group-hover:text-white transition-all shadow-sm border border-gray-100 group-hover:border-transparent">
-                                                            {c.name.split(' ').map(n => n[0]).join('')}
-                                                        </div>
-                                                        <div>
-                                                            <div className="font-black text-gray-800 tracking-tighter text-xl">{c.name}</div>
-                                                            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">{c.email}</div>
-                                                        </div>
+                                    return (
+                                        <tr
+                                            key={c.id}
+                                            className="group cursor-pointer hover:bg-gray-50/50 transition-all"
+                                            onClick={() => setSelectedConsultant(c)}
+                                        >
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-6">
+                                                    <div className="w-16 h-16 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl flex items-center justify-center text-xs font-black text-gray-400 group-hover:from-orange-500 group-hover:to-orange-400 group-hover:text-white transition-all shadow-sm border border-gray-100 group-hover:border-transparent">
+                                                        {c.name.split(' ').map(n => n[0]).join('')}
                                                     </div>
-                                                </td>
-                                                <td>
-                                                    <span className="text-xs font-bold text-gray-500 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100 group-hover:bg-white transition-all uppercase tracking-widest">{c.role}</span>
-                                                </td>
-                                                <td className="text-center">
-                                                    <div className="flex items-center justify-center gap-1.5">
-                                                        <span className="text-lg font-black text-gray-700">{occ.totalHours}</span>
-                                                        <span className="text-[10px] font-bold text-gray-300">/ {settings.standardMonthlyCapacity}h</span>
+                                                    <div>
+                                                        <div className="font-black text-gray-800 tracking-tighter text-xl">{c.name}</div>
+                                                        <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">{c.email}</div>
                                                     </div>
-                                                </td>
-                                                <td className="text-center">
-                                                    <div className="inline-flex items-center px-2 py-1 bg-gray-50 rounded-lg text-[11px] font-black text-gray-400 border border-gray-100">
-                                                        {fte.toFixed(1)}
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <span className={`badge ${getStatusBadgeClass(status)}`}>
-                                                        {status}
-                                                    </span>
-                                                </td>
-                                                <td className="text-right px-8">
-                                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-gray-100 group-hover:bg-orange-500 group-hover:text-white transition-all duration-500 shadow-none group-hover:shadow-lg group-hover:shadow-orange-500/20 translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100">
-                                                        <ChevronRight size={20} />
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className="text-xs font-bold text-gray-500 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100 group-hover:bg-white transition-all uppercase tracking-widest">{c.role}</span>
+                                            </td>
+                                            <td className="text-center">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    <span className="text-lg font-black text-gray-700">{occ.totalHours}</span>
+                                                    <span className="text-[10px] font-bold text-gray-300">/ {settings.standardMonthlyCapacity}h</span>
+                                                </div>
+                                            </td>
+                                            <td className="text-center">
+                                                <div className="inline-flex items-center px-2 py-1 bg-gray-50 rounded-lg text-[11px] font-black text-gray-400 border border-gray-100">
+                                                    {fte.toFixed(1)}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={`badge ${getStatusBadgeClass(status)}`}>
+                                                    {status}
+                                                </span>
+                                            </td>
+                                            <td className="text-right px-8">
+                                                <div className="w-10 h-10 rounded-full flex items-center justify-center text-gray-100 group-hover:bg-orange-500 group-hover:text-white transition-all duration-500 shadow-none group-hover:shadow-lg group-hover:shadow-orange-500/20 translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100">
+                                                    <ChevronRight size={20} />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             )}
         </div>

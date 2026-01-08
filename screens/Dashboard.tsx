@@ -30,12 +30,15 @@ import {
 import {
     LineChart,
     Line,
+    BarChart,
+    Bar,
     XAxis,
     YAxis,
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    Legend
+    Legend,
+    Cell
 } from 'recharts';
 import { generateRecommendations, AIRecommendation } from '../services/geminiService';
 
@@ -80,7 +83,7 @@ const Dashboard: React.FC = () => {
 
         try {
             const appState = { consultants, projects, assignments, absences, settings };
-            const recs = await generateRecommendations(settings.geminiApiKey, appState, period, isWeekly);
+            const recs = await generateRecommendations(settings.geminiApiKey, appState, period.id, isWeekly);
             setRecommendations(recs);
         } catch (error: any) {
             console.error('Error fetching AI recommendations:', error);
@@ -130,7 +133,7 @@ const Dashboard: React.FC = () => {
         let availableCount = 0;
         const capacity = isWeekly ? settings.standardWeeklyCapacity : settings.standardMonthlyCapacity;
 
-        filteredConsultants.forEach(c => {
+        consultants.filter(c => c.active).forEach(c => {
             const occ = getPeriodOccupancy(c.id, assignments, absences, period.id, isWeekly, includeTentative);
             const status = getOccupancyStatus(occ.totalHours, settings, isWeekly);
 
@@ -154,47 +157,30 @@ const Dashboard: React.FC = () => {
         };
     }, [filteredConsultants, assignments, absences, period, isWeekly, includeTentative, settings]);
 
-    const chartData = useMemo(() => {
-        const points = isWeekly ? [1, 2, 3, 4, 5] : [-2, -1, 0, 1, 2, 3];
-        return points.map(p => {
-            let pDate = new Date(date);
-            let periodLabel = '';
-            let pId = '';
+    const teamLoadData = useMemo(() => {
+        return consultants.filter(c => c.active).map(c => {
+            const occ = getPeriodOccupancy(c.id, assignments, absences, period.id, isWeekly, includeTentative);
+            const capacity = isWeekly ? settings.standardWeeklyCapacity : settings.standardMonthlyCapacity;
+            return {
+                name: c.name.split(' ')[0],
+                fullName: c.name,
+                dedication: occ.totalHours,
+                capacity
+            };
+        }).sort((a, b) => b.dedication - a.dedication);
+    }, [consultants, assignments, absences, period, isWeekly, includeTentative, settings]);
 
-            if (isWeekly) {
-                const formatted = formatPeriod(date, true, p);
-                periodLabel = `Sem. ${p}`;
-                pId = formatted.id;
-            } else {
-                pDate.setMonth(pDate.getMonth() + p);
-                const formatted = formatPeriod(pDate, false);
-                periodLabel = formatted.label.split(' ')[0];
-                pId = formatted.id;
-            }
-
-            const data: any = { name: periodLabel };
-
-            const consultantsToChart = selectedForChart.length > 0
-                ? consultants.filter(c => selectedForChart.includes(c.id))
-                : [null];
-
-            consultantsToChart.forEach(c => {
-                if (c) {
-                    const occ = getPeriodOccupancy(c.id, assignments, absences, pId, isWeekly, includeTentative);
-                    data[c.name] = occ.totalHours;
-                }
+    const projectDistribution = useMemo(() => {
+        const dist: Record<string, number> = {};
+        assignments
+            .filter(a => a.period === period.id || a.period.startsWith(`${period.id}-W`))
+            .forEach(a => {
+                const p = projects.find(proj => proj.id === a.projectId);
+                const type = p?.type || 'Interno';
+                dist[type] = (dist[type] || 0) + a.hours;
             });
-
-            let teamTotal = 0;
-            consultants.forEach(c => {
-                const occ = getPeriodOccupancy(c.id, assignments, absences, pId, isWeekly, includeTentative);
-                teamTotal += occ.totalHours;
-            });
-            data['Media Equipo'] = consultants.length > 0 ? teamTotal / consultants.length : 0;
-
-            return data;
-        });
-    }, [date, isWeekly, selectedForChart, consultants, assignments, absences, includeTentative]);
+        return Object.entries(dist).map(([name, value]) => ({ name, value }));
+    }, [assignments, period, projects]);
 
     const toggleChartSelect = (id: string) => {
         setSelectedForChart(prev =>
@@ -281,24 +267,19 @@ const Dashboard: React.FC = () => {
                         <div className="card lg:h-[500px] flex flex-col animate-in fade-in duration-300">
                             <div className="flex items-center justify-between mb-8">
                                 <div>
-                                    <h3 className="mb-1 text-2xl font-black tracking-tight">Curva de Ocupación</h3>
-                                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Historico & Proyección</p>
+                                    <h3 className="mb-1 text-2xl font-black tracking-tight">Carga por Consultor</h3>
+                                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Distribución de horas en el equipo</p>
                                 </div>
-                                <div className="text-[11px] font-black text-white bg-green-500 px-5 py-2 rounded-full uppercase tracking-widest shadow-lg shadow-green-500/20">Proyección Activa</div>
+                                <div className="text-[10px] font-black text-white bg-[#f78c38] px-5 py-2 rounded-full uppercase tracking-widest shadow-lg shadow-orange-500/20">Mapa de Calor</div>
                             </div>
                             <div className="flex-1">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                        <defs>
-                                            <filter id="shadow" height="130%">
-                                                <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="#f78c38" floodOpacity="0.2" />
-                                            </filter>
-                                        </defs>
+                                    <BarChart data={teamLoadData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
                                         <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
                                         <XAxis
                                             dataKey="name"
-                                            fontSize={11}
-                                            fontWeight={700}
+                                            fontSize={10}
+                                            fontWeight={800}
                                             tickLine={false}
                                             axisLine={false}
                                             dy={15}
@@ -313,50 +294,33 @@ const Dashboard: React.FC = () => {
                                             dx={-10}
                                         />
                                         <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                                                borderRadius: '16px',
-                                                border: 'none',
-                                                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-                                                padding: '16px',
-                                                backdropFilter: 'blur(12px)',
-                                                fontSize: '12px'
+                                            cursor={{ fill: '#f8fafc' }}
+                                            content={({ active, payload }) => {
+                                                if (active && payload && payload.length) {
+                                                    const data = payload[0].payload;
+                                                    const isOverloaded = data.dedication > data.capacity;
+                                                    return (
+                                                        <div className="bg-[#252729] text-white p-4 rounded-2xl shadow-2xl border-0">
+                                                            <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mb-1">{data.name}</p>
+                                                            <p className="text-xl font-black">{data.dedication}h <span className="text-xs text-gray-500 font-bold">/ {data.capacity}h</span></p>
+                                                            <div className={`mt-2 px-2 py-1 rounded-lg text-[9px] font-black uppercase text-center ${isOverloaded ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                                                                {isOverloaded ? 'Sobrecarga' : 'Capacidad OK'}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
                                             }}
-                                            itemStyle={{ fontWeight: 700, paddingBottom: '4px' }}
-                                            cursor={{ stroke: '#e2e8f0', strokeWidth: 2 }}
                                         />
-                                        <Legend
-                                            verticalAlign="top"
-                                            align="right"
-                                            iconType="circle"
-                                            wrapperStyle={{ paddingBottom: '20px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}
-                                        />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="Media Equipo"
-                                            stroke="#252729"
-                                            strokeWidth={4}
-                                            dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
-                                            activeDot={{ r: 6, strokeWidth: 0, fill: '#252729' }}
-                                        />
-                                        {selectedForChart.map((id, idx) => {
-                                            const c = consultants.find(con => con.id === id);
-                                            if (!c) return null;
-                                            const colors = ['#f78c38', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6'];
-                                            return (
-                                                <Line
-                                                    key={id}
-                                                    type="monotone"
-                                                    dataKey={c.name}
-                                                    stroke={colors[idx % colors.length]}
-                                                    strokeWidth={3}
-                                                    dot={{ r: 3, strokeWidth: 2, fill: '#fff' }}
-                                                    activeDot={{ r: 5, strokeWidth: 0 }}
-                                                    filter={idx === 0 ? "url(#shadow)" : undefined}
+                                        <Bar dataKey="dedication" radius={[8, 8, 0, 0]}>
+                                            {teamLoadData.map((entry, index) => (
+                                                <Cell
+                                                    key={`cell-${index}`}
+                                                    fill={entry.dedication > entry.capacity ? '#ef4444' : entry.dedication === 0 ? '#f1f5f9' : '#f78c38'}
                                                 />
-                                            );
-                                        })}
-                                    </LineChart>
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
                                 </ResponsiveContainer>
                             </div>
                         </div>
@@ -366,11 +330,11 @@ const Dashboard: React.FC = () => {
                                 <thead>
                                     <tr>
                                         <th className="w-12 text-center"></th>
-                                        <th className="pl-6">Consultor</th>
+                                        <th className="pl-6">Consultor / Especialidad</th>
                                         <th className="text-center">Confirmadas</th>
-                                        <th className="text-center">Total</th>
+                                        <th className="text-center">Dedicación</th>
                                         <th className="text-center">FTE</th>
-                                        <th>Estado</th>
+                                        <th>Estado Actual</th>
                                         <th className="text-right pr-6"></th>
                                     </tr>
                                 </thead>
@@ -533,6 +497,30 @@ const Dashboard: React.FC = () => {
                                 </span>
                                 <div className={`w-2 h-2 rounded-full ${settings.geminiApiKey ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`} />
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="card space-y-6">
+                        <h3 className="mb-0 text-lg flex items-center gap-2">
+                            Distribución Proyectos
+                        </h3>
+                        <div className="space-y-3">
+                            {projectDistribution.map(item => (
+                                <div key={item.name} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between group hover:bg-white hover:shadow-md transition-all">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white ${item.name === 'Cliente' ? 'bg-blue-500' :
+                                            item.name === 'Tentativo' ? 'bg-orange-500' : 'bg-gray-500'
+                                            }`}>
+                                            <Target size={14} />
+                                        </div>
+                                        <div>
+                                            <div className="text-xs font-black text-gray-800 uppercase tracking-tight">{item.name}</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{Math.round((item.value / stats.totalHours) * 100 || 0)}% del total</div>
+                                        </div>
+                                    </div>
+                                    <div className="text-lg font-black text-gray-700">{item.value}h</div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
