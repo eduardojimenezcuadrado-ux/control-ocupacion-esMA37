@@ -42,6 +42,7 @@ export interface Absence {
   period: string;
   isWeekly: boolean;
   notes?: string;
+  sharePointId?: string;
 }
 
 export interface AppSettings {
