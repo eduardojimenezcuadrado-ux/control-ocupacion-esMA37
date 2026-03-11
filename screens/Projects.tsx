@@ -5,6 +5,7 @@ import {
     Search,
     Edit2,
     ChevronRight,
+    ChevronLeft,
     Briefcase,
     Clock,
     Users,
@@ -31,9 +32,15 @@ const Projects: React.FC = () => {
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [isEditing, setIsEditing] = useState(false);
 
-    const date = new Date(2026, 0, 1);
+    const [date, setDate] = useState(new Date(2026, 0, 1));
     const periodData = formatPeriod(date, false);
     const periodId = periodData.id;
+
+    const changePeriod = (delta: number) => {
+        const newDate = new Date(date);
+        newDate.setMonth(newDate.getMonth() + delta);
+        setDate(newDate);
+    };
 
     const filteredProjects = useMemo(() => {
         return projects.filter(p => {
@@ -195,30 +202,39 @@ const Projects: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="card border-0 bg-gradient-to-br from-white to-gray-50 shadow-premium">
                                 <div className="flex items-center justify-between mb-6">
-                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Inversión de Tiempo</span>
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Horas Asignadas</span>
                                     <Clock className="text-[#f78c38]" size={20} />
                                 </div>
                                 <div className="flex items-baseline gap-2">
-                                    <div className="text-5xl font-black text-gray-800 tracking-tighter">{totalHours}h</div>
-                                    <div className="text-xs font-bold text-gray-300">en {periodData.label}</div>
+                                    <div className="text-5xl font-black text-gray-800 tracking-tighter">{selectedProject.horasAsignadas || 0}h</div>
+                                    <div className="text-xs font-bold text-gray-300">Total asignado globalmente</div>
                                 </div>
                             </div>
                             <div className="card border-0 bg-[#252729] text-white shadow-premium">
                                 <div className="flex items-center justify-between mb-6">
-                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Capacidad Humana</span>
-                                    <Users className="text-orange-400" size={20} />
+                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Horas Totales Presupuestadas</span>
+                                    <Target className="text-orange-400" size={20} />
                                 </div>
                                 <div className="flex items-baseline gap-2">
-                                    <div className="text-5xl font-black text-white tracking-tighter">{uniqueTeam}</div>
-                                    <div className="text-xs font-bold text-gray-500">Personas Asignadas</div>
+                                    <div className="text-5xl font-black text-white tracking-tighter">{selectedProject.horasTotales || 0}h</div>
+                                    <div className="text-xs font-bold text-gray-500">Volumen del proyecto</div>
                                 </div>
                             </div>
                         </div>
 
                         <div className="card glass border-0 shadow-premium p-0 overflow-hidden">
-                            <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                                <h3 className="mb-0 text-lg">Distribución del Equipo</h3>
-                                <CheckCircle2 size={18} className="text-green-500" />
+                            <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="mb-0 text-lg">Distribución del Equipo</h3>
+                                    <CheckCircle2 size={18} className="text-green-500 hidden md:block" />
+                                </div>
+                                <div className="flex items-center bg-white p-1 rounded-2xl border border-gray-100 shadow-sm w-fit">
+                                    <button onClick={() => changePeriod(-1)} className="p-2 hover:bg-gray-50 rounded-xl text-gray-400 transition-all"><ChevronLeft size={16} /></button>
+                                    <div className="px-4 font-black text-xs text-gray-800 uppercase tracking-tighter min-w-[120px] text-center">
+                                        {periodData.label}
+                                    </div>
+                                    <button onClick={() => changePeriod(1)} className="p-2 hover:bg-gray-50 rounded-xl text-gray-400 transition-all"><ChevronRight size={16} /></button>
+                                </div>
                             </div>
                             <div className="table-container border-0 rounded-none shadow-none">
                                 <table>
