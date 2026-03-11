@@ -210,14 +210,16 @@ const Projects: React.FC = () => {
                                     <div className="text-xs font-bold text-gray-300">Total asignado globalmente</div>
                                 </div>
                             </div>
-                            <div className="card border-0 bg-[#252729] text-white shadow-premium">
+                            <div className="card border-0 shadow-premium" style={{ background: '#252729', color: '#ffffff' }}>
                                 <div className="flex items-center justify-between mb-6">
-                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Horas Totales Presupuestadas</span>
-                                    <Target className="text-orange-400" size={20} />
+                                    <span style={{ fontSize: '10px', fontWeight: 900, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Horas Totales Presupuestadas</span>
+                                    <Target style={{ color: '#fb923c' }} size={20} />
                                 </div>
                                 <div className="flex items-baseline gap-2">
-                                    <div className="text-5xl font-black text-white tracking-tighter">{selectedProject.horasTotales || 0}h</div>
-                                    <div className="text-xs font-bold text-gray-500">Volumen del proyecto</div>
+                                    <div style={{ fontSize: '3rem', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.05em', lineHeight: 1 }}>
+                                        {selectedProject.horasTotales ?? 0}h
+                                    </div>
+                                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#6b7280' }}>Volumen del proyecto</div>
                                 </div>
                             </div>
                         </div>
