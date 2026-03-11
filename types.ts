@@ -19,6 +19,8 @@ export interface Project {
   client?: string;
   description?: string;
   active: boolean;
+  horasTotales?: number;
+  horasAsignadas?: number;
   sharePointId?: string;
 }
 
