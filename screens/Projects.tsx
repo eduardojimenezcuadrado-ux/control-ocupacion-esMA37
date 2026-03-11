@@ -78,6 +78,8 @@ const Projects: React.FC = () => {
             client: formData.get('client') as string,
             description: formData.get('description') as string,
             active: formData.get('active') === 'on',
+            horasTotales: parseFloat(formData.get('horasTotales') as string) || 0,
+            horasAsignadas: selectedProject ? selectedProject.horasAsignadas || 0 : 0,
         };
 
         if (selectedProject) {
@@ -174,6 +176,15 @@ const Projects: React.FC = () => {
                                     <div className="flex items-center gap-2">
                                         <div className={`w-2 h-2 rounded-full ${selectedProject.active ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
                                         <span className="text-xs font-bold text-gray-700">{selectedProject.active ? 'En proceso' : 'Finalizado'}</span>
+                                    </div>
+                                </div>
+                                <div className="mt-4 px-4">
+                                    <div className="flex justify-between text-xs font-black mb-1">
+                                        <span className="text-gray-400 uppercase tracking-widest">Progreso de Horas</span>
+                                        <span className="text-gray-700">{selectedProject.horasAsignadas || 0} / {selectedProject.horasTotales || 0} h</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                        <div className="h-full bg-[#f78c38] rounded-full" style={{ width: `${Math.min(((selectedProject.horasAsignadas || 0) / (selectedProject.horasTotales || 1)) * 100, 100)}%` }} />
                                     </div>
                                 </div>
                             </div>
@@ -324,6 +335,10 @@ const Projects: React.FC = () => {
                             </div>
                         </div>
                         <div className="space-y-2">
+                            <label className="text-[10px] uppercase tracking-widest font-black text-gray-400">Horas Totales Presupuestadas</label>
+                            <input name="horasTotales" type="number" defaultValue={selectedProject?.horasTotales || 0} placeholder="Ej: 500" className="w-full p-4 bg-gray-50 border-0 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-orange-500/5 outline-none transition-all font-extrabold text-gray-800" />
+                        </div>
+                        <div className="space-y-2">
                             <label className="text-[10px] uppercase tracking-widest font-black text-gray-400">Alcance & Observaciones</label>
                             <textarea name="description" defaultValue={selectedProject?.description} rows={3} placeholder="Define el propósito y contexto de este proyecto..." className="w-full p-4 bg-gray-50 border-0 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-orange-500/5 outline-none transition-all font-medium h-32 resize-none"></textarea>
                         </div>
@@ -379,7 +394,8 @@ const Projects: React.FC = () => {
                             <tr>
                                 <th className="px-8 flex-1">Iniciativa / Proyecto</th>
                                 <th>Modalidad</th>
-                                <th className="text-center">Inversión (h)</th>
+                                <th className="text-center">Progreso Global</th>
+                                <th className="text-center">Inversión {periodData.label}</th>
                                 <th className="text-center">Equipo</th>
                                 <th>Estatus</th>
                                 <th className="text-right px-8"></th>
@@ -428,6 +444,14 @@ const Projects: React.FC = () => {
                                                     }`}>
                                                     {p.type}
                                                 </span>
+                                            </td>
+                                            <td className="text-center">
+                                                <div className="flex flex-col items-center justify-center font-black text-gray-700">
+                                                    <div className="flex items-baseline gap-1">
+                                                        <span className="text-md">{p.horasAsignadas || 0}</span>
+                                                        <span className="text-[10px] text-gray-400">/ {p.horasTotales || 0} h</span>
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td className="text-center">
                                                 <div className="flex items-center justify-center gap-1.5 font-black text-gray-700">

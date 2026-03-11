@@ -28,12 +28,13 @@ import {
     getOccupancyStatus,
     getStatusBadgeClass
 } from '../utils/calculations';
-import { createAssignmentInSharePoint, deleteAssignmentInSharePoint, updateAssignmentInSharePoint, isAuthenticated } from '../services/sharepointService';
+import { createAssignmentInSharePoint, deleteAssignmentInSharePoint, updateAssignmentInSharePoint, isAuthenticated, updateProjectInSharePoint } from '../services/sharepointService';
 
 const Planning: React.FC = () => {
     const {
         consultants,
         projects,
+        setProjects,
         assignments,
         absences,
         addAssignment,
@@ -112,6 +113,15 @@ const Planning: React.FC = () => {
                     updateAssignment({ ...a, sharePointId: spId });
                 }
             }
+
+            const project = projects.find(p => p.id === projectId);
+            if (project && project.sharePointId) {
+                const totalHoras = assignments.filter(a => a.projectId === projectId).reduce((sum, a) => sum + a.hours, 0);
+                const updatedProject = { ...project, horasAsignadas: totalHoras };
+                await updateProjectInSharePoint(updatedProject, settings.sharePointSiteUrl);
+                setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+            }
+
             setToast({ message: 'Fila sincronizada con SharePoint', type: 'success' });
         } catch (error) {
             console.error('Error syncing row:', error);
@@ -132,6 +142,15 @@ const Planning: React.FC = () => {
             try {
                 await deleteAssignmentInSharePoint(assignment.id, assignment.sharePointId, settings.sharePointSiteUrl);
                 removeAssignment(assignment.id);
+
+                const project = projects.find(p => p.id === assignment.projectId);
+                if (project && project.sharePointId) {
+                    const remainingAssignments = assignments.filter(a => a.projectId === assignment.projectId && a.id !== assignment.id);
+                    const totalHoras = remainingAssignments.reduce((sum, a) => sum + a.hours, 0);
+                    const updatedProject = { ...project, horasAsignadas: totalHoras };
+                    await updateProjectInSharePoint(updatedProject, settings.sharePointSiteUrl);
+                    setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+                }
             } catch (error) {
                 alert('Error al borrar en SharePoint');
             }
@@ -373,6 +392,14 @@ const Planning: React.FC = () => {
                                                                                 if (isAuthenticated()) {
                                                                                     const spId = await createAssignmentInSharePoint(newA, settings.sharePointSiteUrl);
                                                                                     addAssignment({ ...newA, sharePointId: spId });
+
+                                                                                    const project = projects.find(p => p.id === pid);
+                                                                                    if (project && project.sharePointId) {
+                                                                                        const totalHoras = assignments.filter(a => a.projectId === pid).reduce((sum, a) => sum + a.hours, 0) + h;
+                                                                                        const updatedProject = { ...project, horasAsignadas: totalHoras };
+                                                                                        await updateProjectInSharePoint(updatedProject, settings.sharePointSiteUrl);
+                                                                                        setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+                                                                                    }
                                                                                 } else {
                                                                                     addAssignment(newA);
                                                                                 }

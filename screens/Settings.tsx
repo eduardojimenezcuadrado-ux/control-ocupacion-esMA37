@@ -16,12 +16,12 @@ import {
     Key,
     ExternalLink
 } from 'lucide-react';
-import { authenticateUser, fetchAllSharePointData, isAuthenticated, getCurrentUser } from '../services/sharepointService';
+import { authenticateUser, fetchAllSharePointData, isAuthenticated, getCurrentUser, updateProjectInSharePoint } from '../services/sharepointService';
 import { getDefaultSharePointConfig } from '../services/sharepointConfig';
 
 
 const SettingsScreen: React.FC = () => {
-    const { settings, setSettings, loadSharePointData } = useAppStore();
+    const { settings, setSettings, loadSharePointData, projects, assignments, setProjects } = useAppStore();
     const [formData, setFormData] = useState(settings);
     const [showSuccess, setShowSuccess] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -52,6 +52,45 @@ const SettingsScreen: React.FC = () => {
         } catch (error: any) {
             console.error('Manual sync failed:', error);
             setSyncError(error.message || 'Error al sincronizar');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const handleRecalculateHours = async () => {
+        setIsSyncing(true);
+        setSyncError(null);
+        try {
+            const config = getDefaultSharePointConfig();
+            if (!isAuthenticated()) {
+                await authenticateUser();
+            }
+
+            let updatedCount = 0;
+            const updatedProjects = [...projects];
+
+            for (let i = 0; i < updatedProjects.length; i++) {
+                const project = updatedProjects[i];
+                if (project.sharePointId) {
+                    const totalHours = assignments.filter(a => a.projectId === project.id).reduce((sum, a) => sum + a.hours, 0);
+                    
+                    if (project.horasAsignadas !== totalHours) {
+                        const updatedProject = { ...project, horasAsignadas: totalHours };
+                        await updateProjectInSharePoint(updatedProject, formData.sharePointSiteUrl || config.siteUrl);
+                        updatedProjects[i] = updatedProject;
+                        updatedCount++;
+                    }
+                }
+            }
+
+            if (updatedCount > 0) {
+                setProjects(updatedProjects);
+            }
+
+            alert(`✅ ${updatedCount} proyectos recalculados y sincronizados con éxito.`);
+        } catch (error: any) {
+            console.error('Recalculate hours failed:', error);
+            setSyncError(error.message || 'Error al recalcular horas');
         } finally {
             setIsSyncing(false);
         }
@@ -190,6 +229,15 @@ const SettingsScreen: React.FC = () => {
                                 className="px-6 py-4 bg-white border-2 border-green-500/20 text-green-600 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-50 transition-all disabled:opacity-50"
                             >
                                 Probar Conexión
+                            </button>
+                        </div>
+                        <div className="mt-3">
+                            <button
+                                onClick={handleRecalculateHours}
+                                disabled={isSyncing}
+                                className="w-full py-4 bg-orange-50 border-2 border-orange-500/20 text-orange-600 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-orange-100 transition-all disabled:opacity-50"
+                            >
+                                {isSyncing ? 'Procesando...' : 'Recalcular Horas Asignadas para Todos los Proyectos'}
                             </button>
                         </div>
                     </div>
