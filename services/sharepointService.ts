@@ -307,6 +307,8 @@ export const fetchProjects = async (siteUrl?: string): Promise<Project[]> => {
         client: item.ClientName || '',
         description: item.Description || '',
         active: item.IsActive !== false,
+        horasTotales: parseFloat(item.HorasTotales) || 0,
+        horasAsignadas: parseFloat(item.HorasAsignadas) || 0,
         sharePointId: item._itemId,
     }));
 };
@@ -518,6 +520,8 @@ export const createProjectInSharePoint = async (project: Project, siteUrl?: stri
         ProjectType: project.type,
         IsActive: project.active,
         Description: project.description || '',
+        HorasTotales: project.horasTotales || 0,
+        HorasAsignadas: project.horasAsignadas || 0,
     };
 
     const result = await createListItem(siteId, listId, fields);
@@ -594,6 +598,8 @@ export const updateProjectInSharePoint = async (project: Project, siteUrl?: stri
         ProjectType: project.type,
         IsActive: project.active,
         Description: project.description || '',
+        HorasTotales: project.horasTotales || 0,
+        HorasAsignadas: project.horasAsignadas || 0,
     };
 
     await updateListItem(siteId, listId, project.sharePointId, fields);
