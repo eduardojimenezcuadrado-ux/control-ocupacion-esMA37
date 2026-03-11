@@ -27,7 +27,7 @@ const Absences: React.FC = () => {
     const [selectedConsultants, setSelectedConsultants] = useState<string[]>([]);
     const [category, setCategory] = useState<AbsenceCategory>('Vacaciones');
     const [hours, setHours] = useState(160);
-    const [date, setDate] = useState(new Date(2026, 0, 1));
+    const [date, setDate] = useState(new Date());
     const [isWeekly, setIsWeekly] = useState(false);
     const [notes, setNotes] = useState('');
     const [showSuccess, setShowSuccess] = useState(false);

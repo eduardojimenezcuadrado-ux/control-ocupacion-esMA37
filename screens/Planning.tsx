@@ -46,7 +46,7 @@ const Planning: React.FC = () => {
     } = useAppStore();
 
     // -- State --
-    const [date, setDate] = useState(new Date(2026, 0, 1));
+    const [date, setDate] = useState(new Date());
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
     const [showProjectSelector, setShowProjectSelector] = useState<{ consultantId: string } | null>(null);

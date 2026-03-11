@@ -32,7 +32,7 @@ const Projects: React.FC = () => {
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [isEditing, setIsEditing] = useState(false);
 
-    const [date, setDate] = useState(new Date(2026, 0, 1));
+    const [date, setDate] = useState(new Date());
     const periodData = formatPeriod(date, false);
     const periodId = periodData.id;
 

@@ -41,7 +41,7 @@ const Consultants: React.FC = () => {
         projects
     } = useAppStore();
 
-    const [date, setDate] = useState(new Date(2026, 0, 1));
+    const [date, setDate] = useState(new Date());
     const period = useMemo(() => formatPeriod(date, false), [date]);
 
     const changePeriod = (delta: number) => {

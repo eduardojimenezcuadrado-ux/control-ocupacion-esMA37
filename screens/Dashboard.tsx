@@ -52,7 +52,7 @@ const Dashboard: React.FC = () => {
         settings
     } = useAppStore();
 
-    const [date, setDate] = useState(new Date(2026, 0, 1));
+    const [date, setDate] = useState(new Date());
     const [isWeekly, setIsWeekly] = useState(settings.defaultView === 'Semanal');
     const [includeTentative, setIncludeTentative] = useState(settings.includeTentativeByDefault);
     const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
